@@ -31,6 +31,7 @@ import {
   nearbyPlaces,
   siteMeta,
 } from './data/siteData'
+import LokasiKamiSection from './components/LokasiKamiSection'
 
 const amenityIcons = {
   wifi: Wifi,
@@ -480,6 +481,8 @@ function App() {
             </div>
           </div>
         </section>
+
+        <LokasiKamiSection />
 
         <section id="tempahan" className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-[2.5rem] border border-[#443327] bg-[#2f221a] text-[#f8f2ea] shadow-[0_32px_120px_rgba(47,34,26,0.22)]">
