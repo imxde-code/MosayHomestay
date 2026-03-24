@@ -3,7 +3,6 @@ import {
   ArrowRight,
   Bath,
   BedDouble,
-  CalendarDays,
   ChefHat,
   ChevronRight,
   Droplets,
@@ -31,6 +30,7 @@ import {
   nearbyPlaces,
   siteMeta,
 } from './data/siteData'
+import BookingCalendarSection from './components/BookingCalendarSection'
 import LokasiKamiSection from './components/LokasiKamiSection'
 
 const amenityIcons = {
@@ -48,38 +48,6 @@ const amenityIcons = {
 
 function resolveAssetPath(assetPath) {
   return `${import.meta.env.BASE_URL}${assetPath.replace(/^\/+/, '')}`
-}
-
-function getTodayString() {
-  const today = new Date()
-  today.setMinutes(today.getMinutes() - today.getTimezoneOffset())
-  return today.toISOString().slice(0, 10)
-}
-
-function getNextDate(dateString) {
-  const date = new Date(`${dateString}T12:00:00`)
-  date.setDate(date.getDate() + 1)
-  return date.toISOString().slice(0, 10)
-}
-
-function formatDate(dateString) {
-  return new Intl.DateTimeFormat('ms-MY', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(`${dateString}T12:00:00`))
-}
-
-function buildWhatsAppLink({ checkIn, checkOut, guests }) {
-  const message = [
-    'Salam Mosay Homestay, saya berminat untuk membuat tempahan.',
-    `Tarikh masuk: ${formatDate(checkIn)}`,
-    `Tarikh keluar: ${formatDate(checkOut)}`,
-    `Jumlah tetamu: ${guests} orang`,
-    'Mohon maklumkan ketersediaan tarikh. Terima kasih.',
-  ].join('\n')
-
-  return `https://wa.me/60192683116?text=${encodeURIComponent(message)}`
 }
 
 function SectionHeading({ eyebrow, title, description, align = 'left' }) {
@@ -172,10 +140,6 @@ function GalleryCard({ image, isMissing, onError, onOpen }) {
 }
 
 function App() {
-  const today = getTodayString()
-  const [checkIn, setCheckIn] = useState(today)
-  const [checkOut, setCheckOut] = useState(getNextDate(today))
-  const [guests, setGuests] = useState('8')
   const [activeImage, setActiveImage] = useState(null)
   const [failedImages, setFailedImages] = useState({})
 
@@ -200,18 +164,7 @@ function App() {
     }
   }, [activeImage])
 
-  const checkOutMin = checkIn ? getNextDate(checkIn) : getNextDate(today)
-  const whatsappBookingLink = buildWhatsAppLink({ checkIn, checkOut, guests })
   const activeImageDetails = activeImage ? galleryDetails[activeImage] : null
-
-  function handleCheckInChange(event) {
-    const nextCheckIn = event.target.value
-    setCheckIn(nextCheckIn)
-
-    if (!checkOut || checkOut <= nextCheckIn) {
-      setCheckOut(getNextDate(nextCheckIn))
-    }
-  }
 
   function handleImageError(imagePath) {
     setFailedImages((current) => ({
@@ -484,120 +437,7 @@ function App() {
 
         <LokasiKamiSection />
 
-        <section id="tempahan" className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
-          <div className="overflow-hidden rounded-[2.5rem] border border-[#443327] bg-[#2f221a] text-[#f8f2ea] shadow-[0_32px_120px_rgba(47,34,26,0.22)]">
-            <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
-              <div className="bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.1),_transparent_55%)] p-8 sm:p-10 lg:p-12">
-                <p className="inline-flex items-center rounded-full border border-white/[0.12] bg-white/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-[#d7bea2]">
-                  Kalendar Tempahan
-                </p>
-                <h2 className="mt-6 text-balance font-display text-4xl leading-none text-[#f8f2ea] sm:text-5xl">
-                  Pilih tarikh anda dan teruskan pertanyaan melalui WhatsApp.
-                </h2>
-                <p className="mt-5 max-w-2xl text-base leading-8 text-[#dbc8b7] sm:text-lg">
-                  Pilih tarikh masuk, tarikh keluar dan jumlah tetamu. Kami akan bantu semak ketersediaan dan respon dengan lebih pantas melalui WhatsApp.
-                </p>
-
-                <div className="mt-8 space-y-4 rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                  <div className="flex items-start gap-4">
-                    <CalendarDays className="mt-1 size-5 text-[#e8ccb0]" strokeWidth={1.75} />
-                    <div>
-                      <p className="font-semibold">Paparan kalendar yang ringkas dan jelas</p>
-                      <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                        Pilihan tarikh di bawah membantu anda merancang penginapan dengan lebih mudah. Pengesahan akhir dibuat melalui WhatsApp.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <Phone className="mt-1 size-5 text-[#e8ccb0]" strokeWidth={1.75} />
-                    <div>
-                      <p className="font-semibold">Hubungi kami terus</p>
-                      <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                        {siteMeta.phoneDisplay}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-[#f8f2ea] p-8 text-[#2f221a] sm:p-10 lg:p-12">
-                <div className="rounded-[2rem] border border-[#eadccf] bg-white p-6 shadow-[0_24px_80px_rgba(80,58,35,0.1)] sm:p-8">
-                  <h3 className="text-2xl font-semibold">Semak tarikh penginapan anda</h3>
-                  <p className="mt-3 text-sm leading-7 text-[#665548]">
-                    Pilih tarikh dan jumlah tetamu. Butang WhatsApp akan terus membawa mesej tempahan yang lebih tersusun.
-                  </p>
-
-                  <div className="mt-8 grid gap-5 sm:grid-cols-2">
-                    <label className="block">
-                      <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                        Tarikh masuk
-                      </span>
-                      <input
-                        type="date"
-                        min={today}
-                        value={checkIn}
-                        onChange={handleCheckInChange}
-                        className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                      />
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                        Tarikh keluar
-                      </span>
-                      <input
-                        type="date"
-                        min={checkOutMin}
-                        value={checkOut}
-                        onChange={(event) => setCheckOut(event.target.value)}
-                        className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                      />
-                    </label>
-                  </div>
-
-                  <label className="mt-5 block">
-                    <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                      Jumlah tetamu
-                    </span>
-                    <select
-                      value={guests}
-                      onChange={(event) => setGuests(event.target.value)}
-                      className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                    >
-                      {[4, 6, 8, 10, 12].map((option) => (
-                        <option key={option} value={String(option)}>
-                          {option} orang
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <div className="mt-7 rounded-[1.5rem] bg-[#f7efe5] p-5">
-                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                      Ringkasan tempahan
-                    </p>
-                    <div className="mt-4 grid gap-3 text-sm leading-7 text-[#4d3d33]">
-                      <p>Tarikh masuk: <span className="font-semibold">{formatDate(checkIn)}</span></p>
-                      <p>Tarikh keluar: <span className="font-semibold">{formatDate(checkOut)}</span></p>
-                      <p>Jumlah tetamu: <span className="font-semibold">{guests} orang</span></p>
-                    </div>
-                  </div>
-
-                  <a
-                    href={whatsappBookingLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-7 inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
-                  >
-                    Klik WhatsApp untuk tempahan sekarang
-                    <MessageCircle className="size-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <BookingCalendarSection />
 
         <section className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-[2.5rem] border border-white/70 bg-white/85 p-8 shadow-[0_24px_80px_rgba(80,58,35,0.09)] sm:p-10 lg:p-12">
