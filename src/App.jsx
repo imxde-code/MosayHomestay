@@ -45,6 +45,10 @@ const amenityIcons = {
   home: Home,
 }
 
+function resolveAssetPath(assetPath) {
+  return `${import.meta.env.BASE_URL}${assetPath.replace(/^\/+/, '')}`
+}
+
 function getTodayString() {
   const today = new Date()
   today.setMinutes(today.getMinutes() - today.getTimezoneOffset())
@@ -118,6 +122,7 @@ function GalleryCard({ image, isMissing, onError, onOpen }) {
     description: 'Kemaskini butiran galeri untuk paparan yang lebih lengkap.',
     tag: 'Galeri',
   }
+  const imageSrc = resolveAssetPath(image)
 
   return (
     <button
@@ -145,7 +150,7 @@ function GalleryCard({ image, isMissing, onError, onOpen }) {
       ) : (
         <>
           <img
-            src={image}
+            src={imageSrc}
             alt={details.title}
             loading="lazy"
             onError={() => onError(image)}
@@ -677,7 +682,7 @@ function App() {
             <div className="grid w-full gap-4 lg:grid-cols-[1.15fr_0.55fr]">
               <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#120e0b] shadow-[0_32px_120px_rgba(0,0,0,0.35)]">
                 <img
-                  src={activeImage}
+                  src={resolveAssetPath(activeImage)}
                   alt={activeImageDetails.title}
                   className="max-h-[78vh] w-full object-cover"
                 />
