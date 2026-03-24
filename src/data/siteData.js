@@ -103,38 +103,56 @@ export const amenities = [
 // Letakkan semua gambar homestay anda dalam folder /public/images/
 // Kemudian update senarai dalam array galleryImages di atas
 export const galleryImages = [
-  '/images/rumah1.jpg',
-  '/images/ruangtamu.jpg',
-  '/images/bilik1.jpg',
-  '/images/bilik2.jpg',
-  '/images/dapur.jpg',
+  '/images/ruang-tamu.jpeg',
+  '/images/ruang-makan.jpeg',
+  '/images/bilik-utama-biru.jpeg',
+  '/images/bilik-utama-ungu.jpeg',
+  '/images/bilik-utama-merah-jambu.jpeg',
+  '/images/bilik-dua-katil.jpeg',
+  '/images/bilik-single-tambahan.jpeg',
+  '/images/pemandangan-kawasan.jpeg',
 ]
 
 export const galleryDetails = {
-  '/images/rumah1.jpg': {
-    title: 'Bahagian luar rumah',
-    description: 'Kemas, mudah diakses dan memberi rasa selesa sejak ketibaan.',
-    tag: 'Ruang hadapan',
-  },
-  '/images/ruangtamu.jpg': {
+  '/images/ruang-tamu.jpeg': {
     title: 'Ruang tamu keluarga',
-    description: 'Tempat santai untuk berkumpul, berbual dan menonton bersama.',
+    description: 'Ruang santai yang selesa untuk berkumpul, menonton dan berehat bersama keluarga.',
     tag: 'Ruang santai',
   },
-  '/images/bilik1.jpg': {
-    title: 'Bilik utama yang tenang',
-    description: 'Lengkap dengan katil queen untuk tidur yang lebih selesa.',
+  '/images/ruang-makan.jpeg': {
+    title: 'Ruang makan yang kemas',
+    description: 'Sesuai untuk sarapan, makan malam dan waktu santai bersama tetamu lain.',
+    tag: 'Ruang makan',
+  },
+  '/images/bilik-utama-biru.jpeg': {
+    title: 'Bilik utama biru',
+    description: 'Bilik yang lapang dan tenang untuk rehat malam yang lebih selesa.',
     tag: 'Bilik tidur',
   },
-  '/images/bilik2.jpg': {
-    title: 'Bilik tambahan yang praktikal',
-    description: 'Sesuai untuk keluarga besar atau kumpulan yang perlukan ruang ekstra.',
-    tag: 'Ruang fleksibel',
+  '/images/bilik-utama-ungu.jpeg': {
+    title: 'Bilik utama ungu',
+    description: 'Pilihan bilik yang selesa dengan susun atur praktikal untuk penginapan keluarga.',
+    tag: 'Bilik tidur',
   },
-  '/images/dapur.jpg': {
-    title: 'Dapur lengkap untuk kegunaan anda',
-    description: 'Mudah untuk sediakan sarapan, minuman atau masakan ringkas.',
-    tag: 'Dapur',
+  '/images/bilik-utama-merah-jambu.jpeg': {
+    title: 'Bilik utama merah jambu',
+    description: 'Suasana bilik yang kemas dan nyaman untuk tidur yang lebih berkualiti.',
+    tag: 'Bilik tidur',
+  },
+  '/images/bilik-dua-katil.jpeg': {
+    title: 'Bilik dua katil',
+    description: 'Sesuai untuk ahli keluarga atau kumpulan kecil yang perlukan susunan katil berasingan.',
+    tag: 'Bilik keluarga',
+  },
+  '/images/bilik-single-tambahan.jpeg': {
+    title: 'Bilik tambahan single',
+    description: 'Ruang tambahan yang praktikal untuk tetamu ekstra atau anak-anak.',
+    tag: 'Bilik tambahan',
+  },
+  '/images/pemandangan-kawasan.jpeg': {
+    title: 'Pemandangan kawasan sekitar',
+    description: 'Persekitaran kejiranan yang tenang dan sesuai untuk penginapan keluarga.',
+    tag: 'Kawasan sekitar',
   },
 }
 
