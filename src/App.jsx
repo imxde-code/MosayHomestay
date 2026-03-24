@@ -666,6 +666,12 @@ function App() {
             </a>
           </div>
         </div>
+
+        <div className="border-t border-[#e7dacb] px-4 py-5 text-center sm:px-6 lg:px-8">
+          <p className="signature-shadow text-xs font-semibold uppercase tracking-[0.32em] text-[#8b6b4a]">
+            Dibina oleh imxde-code
+          </p>
+        </div>
       </footer>
 
       <a

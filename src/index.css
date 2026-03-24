@@ -78,6 +78,10 @@ img {
   animation: float-card 8s ease-in-out infinite 1.1s;
 }
 
+.signature-shadow {
+  text-shadow: 0 10px 28px rgba(92, 68, 47, 0.2);
+}
+
 @keyframes fade-up {
   from {
     opacity: 0;
