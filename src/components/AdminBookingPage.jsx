@@ -95,7 +95,7 @@ function getFriendlyBookingError(error) {
   }
 
   if (message.includes('new row violates row-level security policy')) {
-    return 'Akses anda untuk mengurus booking belum dibenarkan. Pastikan polisi RLS admin sudah dijalankan di Supabase.'
+    return 'Akses anda untuk mengurus booking belum dibenarkan. Semak semula tetapan akses admin sistem anda.'
   }
 
   return message || 'Tindakan tidak berjaya disimpan. Sila cuba lagi.'
@@ -243,7 +243,7 @@ function AdminBookingPage() {
 
     if (!supabase) {
       setAuthError(
-        'Sambungan Supabase belum tersedia. Semak semula VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY.',
+        'Sambungan sistem belum tersedia. Semak semula konfigurasi laman anda.',
       )
       return
     }
@@ -348,7 +348,7 @@ function AdminBookingPage() {
 
     if (!supabase) {
       setFormError(
-        'Sambungan Supabase belum tersedia. Semak semula konfigurasi environment anda.',
+        'Sambungan sistem belum tersedia. Semak semula konfigurasi laman anda.',
       )
       return
     }
@@ -419,9 +419,8 @@ function AdminBookingPage() {
             Panel Admin belum diaktifkan.
           </h1>
           <p className="mt-5 text-base leading-8 text-[#665548]">
-            Isikan <span className="font-semibold">VITE_SUPABASE_URL</span> dan{' '}
-            <span className="font-semibold">VITE_SUPABASE_ANON_KEY</span> dahulu
-            untuk mengurus booking terus dari website ini.
+            Lengkapkan konfigurasi sambungan data dahulu untuk mengurus booking
+            terus dari website ini.
           </p>
         </div>
       </div>
@@ -493,8 +492,8 @@ function AdminBookingPage() {
                 Akses khas untuk pengurusan tempahan.
               </h2>
               <p className="mt-5 text-base leading-8 text-[#dbc8b7]">
-                Gunakan akaun admin Supabase anda untuk melihat semua booking,
-                menambah tempahan baru, atau membatalkan tarikh sedia ada.
+                Gunakan akaun admin anda untuk melihat semua booking, menambah
+                tempahan baru, atau membatalkan tarikh sedia ada.
               </p>
 
               <div className="mt-8 space-y-4 rounded-[2rem] border border-white/10 bg-white/5 p-6">
@@ -503,7 +502,7 @@ function AdminBookingPage() {
                   <div>
                     <p className="font-semibold">Guna akaun admin anda sendiri</p>
                     <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                      Cipta seorang pengguna admin dalam Supabase Authentication
+                      Cipta seorang pengguna admin dalam sistem authentication
                       dan gunakan email serta kata laluan itu di sini.
                     </p>
                   </div>
@@ -511,7 +510,7 @@ function AdminBookingPage() {
                 <div className="flex items-start gap-4">
                   <ShieldCheck className="mt-1 size-5 text-[#e8ccb0]" />
                   <div>
-                    <p className="font-semibold">Data booking kekal di Supabase</p>
+                    <p className="font-semibold">Data booking kekal dalam sistem</p>
                     <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
                       Semua perubahan yang anda simpan di panel ini akan terus
                       mempengaruhi kalendar ketersediaan di laman utama.
@@ -527,7 +526,7 @@ function AdminBookingPage() {
               </h2>
               <p className="mt-4 text-sm leading-7 text-[#665548]">
                 Jika login belum berjaya, semak semula sama ada pengguna admin
-                sudah diwujudkan di Supabase Authentication.
+                sudah diwujudkan dalam sistem authentication.
               </p>
 
               <form className="mt-8 space-y-5" onSubmit={handleSignIn}>

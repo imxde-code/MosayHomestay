@@ -135,7 +135,7 @@ function BookingCalendarSection() {
               Kalendar Ketersediaan
             </p>
             <h2 className="mt-6 text-balance font-display text-4xl leading-none text-[#f8f2ea] sm:text-5xl">
-              Semak tarikh tersedia secara lebih tepat dengan Supabase.
+              Semak tarikh tersedia secara lebih tepat dan teratur.
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-8 text-[#dbc8b7] sm:text-lg">
               Tarikh yang telah disahkan atau ditutup akan ditanda sebagai tidak
@@ -158,8 +158,8 @@ function BookingCalendarSection() {
                 <div>
                   <p className="font-semibold">Tarikh dikunci secara automatik</p>
                   <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                    Kalendar membaca blok tempahan daripada Supabase supaya
-                    tarikh yang sudah ditempah tidak dipilih semula.
+                    Kalendar membaca blok tempahan daripada sistem supaya tarikh
+                    yang sudah ditempah tidak dipilih semula.
                   </p>
                 </div>
               </div>
@@ -173,8 +173,8 @@ function BookingCalendarSection() {
                   <p className="font-semibold">Sesuai untuk urusan pentadbiran</p>
                   <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
                     Anda boleh urus tarikh yang diblok atau disahkan terus
-                    melalui Supabase tanpa perlu ubah kod website setiap kali ada
-                    tempahan baru.
+                    melalui panel pengurusan tanpa perlu ubah kod website setiap
+                    kali ada tempahan baru.
                   </p>
                 </div>
               </div>
@@ -368,9 +368,8 @@ function BookingCalendarSection() {
 
               {!hasSupabaseConfig && import.meta.env.DEV ? (
                 <div className="mt-5 rounded-[1.5rem] border border-dashed border-[#d8c8b4] bg-white px-4 py-4 text-sm leading-7 text-[#665548]">
-                  Sambungkan <span className="font-semibold">VITE_SUPABASE_URL</span>{' '}
-                  dan <span className="font-semibold">VITE_SUPABASE_ANON_KEY</span>{' '}
-                  untuk aktifkan ketersediaan semasa dari Supabase.
+                  Lengkapkan konfigurasi sambungan data untuk aktifkan
+                  ketersediaan semasa secara automatik.
                 </div>
               ) : null}
             </div>
