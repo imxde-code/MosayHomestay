@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import {
   ArrowRight,
   Bath,
@@ -33,6 +33,8 @@ import {
 import BookingCalendarSection from './components/BookingCalendarSection'
 import LokasiKamiSection from './components/LokasiKamiSection'
 
+const AdminBookingPage = lazy(() => import('./components/AdminBookingPage'))
+
 const amenityIcons = {
   wifi: Wifi,
   tv: Tv,
@@ -48,6 +50,14 @@ const amenityIcons = {
 
 function resolveAssetPath(assetPath) {
   return `${import.meta.env.BASE_URL}${assetPath.replace(/^\/+/, '')}`
+}
+
+function isAdminRouteHash() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  return window.location.hash.startsWith('#/admin')
 }
 
 function SectionHeading({ eyebrow, title, description, align = 'left' }) {
@@ -140,8 +150,18 @@ function GalleryCard({ image, isMissing, onError, onOpen }) {
 }
 
 function App() {
+  const [isAdminRoute, setIsAdminRoute] = useState(isAdminRouteHash)
   const [activeImage, setActiveImage] = useState(null)
   const [failedImages, setFailedImages] = useState({})
+
+  useEffect(() => {
+    const syncRoute = () => setIsAdminRoute(isAdminRouteHash())
+
+    syncRoute()
+    window.addEventListener('hashchange', syncRoute)
+
+    return () => window.removeEventListener('hashchange', syncRoute)
+  }, [])
 
   useEffect(() => {
     if (!activeImage) {
@@ -171,6 +191,27 @@ function App() {
       ...current,
       [imagePath]: true,
     }))
+  }
+
+  if (isAdminRoute) {
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-[linear-gradient(180deg,_#fbf6f0_0%,_#f7f0e8_38%,_#f5eee4_100%)] px-4 py-10 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-3xl rounded-[2.5rem] border border-white/70 bg-white/90 p-8 text-center shadow-[0_24px_80px_rgba(80,58,35,0.08)] sm:p-10">
+              <p className="inline-flex items-center gap-3 rounded-full border border-[#d8c8b4] bg-[#f8f2ea] px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#8b6b4a]">
+                Memuatkan panel admin
+              </p>
+              <p className="mt-5 text-sm leading-7 text-[#665548]">
+                Sila tunggu sebentar sementara panel pengurusan dibuka.
+              </p>
+            </div>
+          </div>
+        }
+      >
+        <AdminBookingPage />
+      </Suspense>
+    )
   }
 
   return (
@@ -510,10 +551,18 @@ function App() {
           </div>
         </div>
 
-        <div className="border-t border-[#e7dacb] px-4 py-5 text-center sm:px-6 lg:px-8">
-          <p className="signature-shadow text-xs font-semibold uppercase tracking-[0.32em] text-[#8b6b4a]">
-            Dibina oleh imxde-code
-          </p>
+        <div className="border-t border-[#e7dacb] px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-6">
+            <p className="signature-shadow text-xs font-semibold uppercase tracking-[0.32em] text-[#8b6b4a]">
+              Dibina oleh imxde-code
+            </p>
+            <a
+              href={`${import.meta.env.BASE_URL}#/admin`}
+              className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8b6b4a] transition hover:text-[#2f221a]"
+            >
+              Akses Admin
+            </a>
+          </div>
         </div>
       </footer>
 
