@@ -648,7 +648,10 @@ function App() {
           </div>
 
           <div className="flex flex-col gap-3 text-sm text-[#665548]">
-            <a href={siteMeta.phoneHref} className="inline-flex items-center gap-3 transition hover:text-[#2f221a]">
+            <a
+              href={siteMeta.phoneHref}
+              className="inline-flex items-center gap-3 text-[#665548] transition hover:text-[#2f221a]"
+            >
               <Phone className="size-4" strokeWidth={1.75} />
               {siteMeta.phoneDisplay}
             </a>
@@ -656,7 +659,7 @@ function App() {
               href={siteMeta.whatsappLink}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-3 transition hover:text-[#2f221a]"
+              className="inline-flex items-center gap-3 text-[#665548] transition hover:text-[#2f221a]"
             >
               <MessageCircle className="size-4" strokeWidth={1.75} />
               Tempahan melalui WhatsApp
