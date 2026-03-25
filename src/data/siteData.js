@@ -352,10 +352,31 @@ const localizedSiteData = {
       panel: {
         title: 'Pilih tarikh penginapan anda',
         description:
-          'Pilih julat tarikh terus pada kalendar. Tarikh berwarna akan menandakan ketersediaan semasa.',
+          'Gunakan bar tarikh ringkas untuk buka kalendar ketersediaan dan pilih julat penginapan anda.',
         loadingAvailability: 'Memuatkan ketersediaan',
         liveAvailability: 'Ketersediaan semasa',
         manualMode: 'Mod manual sementara',
+      },
+      dateBar: {
+        checkInLabel: 'Tarikh masuk',
+        checkInPlaceholder: 'Pilih tarikh',
+        checkOutLabel: 'Tarikh keluar',
+        checkOutPlaceholder: 'Pilih tarikh',
+        stayLabel: 'Tempoh penginapan',
+        stayEmpty: 'Belum dipilih',
+        helper:
+          'Buka kalendar untuk semak tarikh tersedia secara langsung, kemudian pilih tarikh masuk dan tarikh keluar anda.',
+        openCalendarLabel: 'Buka Kalendar',
+        changeDatesLabel: 'Ubah Tarikh',
+        clearDatesLabel: 'Kosongkan tarikh',
+      },
+      modal: {
+        eyebrow: 'Kalendar ketersediaan',
+        title: 'Pilih julat tarikh anda',
+        description:
+          'Tarikh yang berwarna menunjukkan ketersediaan semasa. Pilih tarikh masuk dan tarikh keluar terus dari kalendar ini.',
+        closeLabel: 'Tutup kalendar',
+        doneLabel: 'Simpan Pilihan',
       },
       guestsLabel: 'Jumlah tetamu',
       guestsSuffix: 'orang',
@@ -366,7 +387,7 @@ const localizedSiteData = {
         nights: 'Jumlah malam',
         guests: 'Jumlah tetamu',
         empty:
-          'Pilih tarikh masuk dan tarikh keluar terus pada kalendar untuk melihat ringkasan tempahan anda.',
+          'Buka kalendar ketersediaan untuk pilih tarikh masuk dan tarikh keluar anda, kemudian ringkasan tempahan akan muncul di sini.',
         nightsSuffix: 'malam',
       },
       upcomingUnavailableTitle: 'Tarikh tidak tersedia terdekat',
@@ -740,10 +761,31 @@ const localizedSiteData = {
       panel: {
         title: 'Choose your stay dates',
         description:
-          'Select your date range directly on the calendar. Colored dates reflect the latest availability.',
+          'Use the compact date bar to open the availability calendar and choose your stay range.',
         loadingAvailability: 'Loading availability',
         liveAvailability: 'Live availability',
         manualMode: 'Manual mode for now',
+      },
+      dateBar: {
+        checkInLabel: 'Check-in',
+        checkInPlaceholder: 'Select a date',
+        checkOutLabel: 'Check-out',
+        checkOutPlaceholder: 'Select a date',
+        stayLabel: 'Stay length',
+        stayEmpty: 'Not selected yet',
+        helper:
+          'Open the calendar to review live availability, then choose your check-in and check-out dates.',
+        openCalendarLabel: 'Open Calendar',
+        changeDatesLabel: 'Change Dates',
+        clearDatesLabel: 'Clear dates',
+      },
+      modal: {
+        eyebrow: 'Availability calendar',
+        title: 'Choose your stay range',
+        description:
+          'Highlighted dates reflect the latest availability. Select your check-in and check-out dates directly from this calendar.',
+        closeLabel: 'Close calendar',
+        doneLabel: 'Save Selection',
       },
       guestsLabel: 'Number of guests',
       guestsSuffix: 'guests',
@@ -754,7 +796,7 @@ const localizedSiteData = {
         nights: 'Number of nights',
         guests: 'Number of guests',
         empty:
-          'Choose your check-in and check-out dates on the calendar to see your booking summary.',
+          'Open the availability calendar to choose your check-in and check-out dates, then your booking summary will appear here.',
         nightsSuffix: 'nights',
       },
       upcomingUnavailableTitle: 'Upcoming unavailable dates',
