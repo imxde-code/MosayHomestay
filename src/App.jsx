@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useId, useRef, useState } from 'react'
 import {
   ArrowRight,
   Bath,
@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Droplets,
   Home,
+  LoaderCircle,
   Menu,
   MapPin,
   MessageCircle,
@@ -25,15 +26,18 @@ import {
   galleryImages,
   getSiteData,
 } from './data/siteData'
-import BookingCalendarSection from './components/BookingCalendarSection'
+import LanguageToggle from './components/LanguageToggle'
 import LokasiKamiSection from './components/LokasiKamiSection'
 import {
   defaultLanguage,
   normalizeLanguage,
-  supportedLanguages,
 } from './lib/language'
+import { useAccessibleDialog } from './lib/useAccessibleDialog'
 
-const AdminBookingPage = lazy(() => import('./components/AdminBookingPage'))
+const loadAdminBookingPage = () => import('./components/AdminBookingPage')
+const loadBookingCalendarSection = () => import('./components/BookingCalendarSection')
+const AdminBookingPage = lazy(loadAdminBookingPage)
+const BookingCalendarSection = lazy(loadBookingCalendarSection)
 const languageStorageKey = 'mosay-language'
 
 const amenityIcons = {
@@ -129,38 +133,6 @@ function SectionHeading({ eyebrow, title, description, align = 'left' }) {
   )
 }
 
-function LanguageToggle({ language, onChange, label }) {
-  return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-[#d8c8b4] bg-white/80 p-1 text-[#2f221a] shadow-[0_12px_28px_rgba(111,88,63,0.08)]">
-      <span className="hidden px-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8b6b4a] sm:block">
-        {label}
-      </span>
-      <div className="flex items-center gap-1">
-        {supportedLanguages.map((option) => {
-          const isActive = option.code === language
-
-          return (
-            <button
-              key={option.code}
-              type="button"
-              onClick={() => onChange(option.code)}
-              className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                isActive
-                  ? 'bg-[#2f221a] text-[#f8f2ea]'
-                  : 'text-[#6a584c] hover:bg-[#f4ecdf]'
-              }`}
-              aria-pressed={isActive}
-              title={option.name}
-            >
-              {option.label}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 function BrandLogo({ href, siteMeta, variant = 'header' }) {
   const sizeClass =
     variant === 'header'
@@ -208,7 +180,7 @@ function GalleryCard({ image, details, isMissing, onError, onOpen, fallbackCopy 
     <button
       type="button"
       disabled={isMissing}
-      onClick={() => onOpen(image)}
+      onClick={(event) => onOpen(image, event.currentTarget)}
       className="group relative overflow-hidden rounded-[2rem] border border-white/70 bg-[#f4ecdf] text-left shadow-[0_24px_80px_rgba(80,58,35,0.08)] transition duration-500 hover:-translate-y-1.5 hover:shadow-[0_34px_100px_rgba(80,58,35,0.16)] disabled:cursor-default disabled:hover:translate-y-0"
     >
       {isMissing ? (
@@ -250,11 +222,60 @@ function GalleryCard({ image, details, isMissing, onError, onOpen, fallbackCopy 
   )
 }
 
+function BookingSectionFallback({ copy, sectionRef = null }) {
+  return (
+    <section
+      id="tempahan"
+      ref={sectionRef}
+      className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8"
+    >
+      <div className="overflow-hidden rounded-[2.5rem] border border-[#443327] bg-[#2f221a] text-[#f8f2ea] shadow-[0_32px_120px_rgba(47,34,26,0.22)]">
+        <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.1),_transparent_55%)] p-8 sm:p-10 lg:p-12">
+            <p className="inline-flex items-center rounded-full border border-white/[0.12] bg-white/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-[#d7bea2]">
+              {copy.eyebrow}
+            </p>
+            <h2 className="mt-6 text-balance font-display text-4xl leading-none text-[#f8f2ea] sm:text-5xl">
+              {copy.title}
+            </h2>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-[#dbc8b7] sm:text-lg">
+              {copy.description}
+            </p>
+          </div>
+
+          <div className="bg-[#f8f2ea] p-8 text-[#2f221a] sm:p-10 lg:p-12">
+            <div className="rounded-[2rem] border border-[#eadccf] bg-white p-6 shadow-[0_24px_80px_rgba(80,58,35,0.1)] sm:p-8">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#f7efe5] px-4 py-2 text-sm font-medium text-[#6b5848]">
+                <LoaderCircle className="size-4 animate-spin" />
+                {copy.panel.loadingAvailability}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function App() {
   const [isAdminRoute, setIsAdminRoute] = useState(isAdminRouteHash)
   const [activeImage, setActiveImage] = useState(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [failedImages, setFailedImages] = useState({})
+  const galleryDialogRef = useRef(null)
+  const galleryCloseButtonRef = useRef(null)
+  const galleryTriggerRef = useRef(null)
+  const bookingSectionFallbackRef = useRef(null)
+  const [shouldLoadBookingSection, setShouldLoadBookingSection] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false
+    }
+
+    return (
+      typeof window.IntersectionObserver === 'undefined' ||
+      getSectionIdFromHash(window.location.hash) === 'tempahan'
+    )
+  })
   const [language, setLanguage] = useState(() => {
     if (typeof window === 'undefined') {
       return defaultLanguage
@@ -286,6 +307,10 @@ function App() {
         return
       }
 
+      if (sectionId === 'tempahan') {
+        setShouldLoadBookingSection(true)
+      }
+
       window.requestAnimationFrame(() => {
         document.getElementById(sectionId)?.scrollIntoView({ block: 'start' })
       })
@@ -298,34 +323,32 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!activeImage) {
+    if (shouldLoadBookingSection) {
       return undefined
     }
 
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setActiveImage(null)
-      }
+    const fallbackElement = bookingSectionFallbackRef.current
+
+    if (!fallbackElement) {
+      return undefined
     }
 
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', handleEscape)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoadBookingSection(true)
+          observer.disconnect()
+        }
+      },
+      {
+        rootMargin: '800px 0px',
+      },
+    )
 
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', handleEscape)
-    }
-  }, [activeImage])
+    observer.observe(fallbackElement)
 
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    window.localStorage.setItem(languageStorageKey, language)
-    document.documentElement.lang = language
-  }, [language])
+    return () => observer.disconnect()
+  }, [shouldLoadBookingSection])
 
   useEffect(() => {
     if (!isMobileMenuOpen) {
@@ -370,6 +393,37 @@ function App() {
   } = getSiteData(language)
 
   const activeImageDetails = activeImage ? galleryDetails[activeImage] : null
+  const galleryDialogTitleId = useId()
+  const galleryDialogDescriptionId = useId()
+
+  const closeGalleryDialog = useCallback(() => {
+    setActiveImage(null)
+  }, [])
+
+  const handleOpenImage = useCallback((image, triggerElement) => {
+    if (triggerElement instanceof HTMLElement) {
+      galleryTriggerRef.current = triggerElement
+    }
+
+    setActiveImage(image)
+  }, [])
+
+  useAccessibleDialog({
+    isOpen: Boolean(activeImage && activeImageDetails),
+    dialogRef: galleryDialogRef,
+    onClose: closeGalleryDialog,
+    initialFocusRef: galleryCloseButtonRef,
+    returnFocusRef: galleryTriggerRef,
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem(languageStorageKey, language)
+    document.documentElement.lang = language
+  }, [language])
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -430,7 +484,11 @@ function App() {
           </div>
         }
       >
-        <AdminBookingPage />
+        <AdminBookingPage
+          language={language}
+          onLanguageChange={setLanguage}
+          languageToggleLabel={appContent.languageSwitcherLabel}
+        />
       </Suspense>
     )
   }
@@ -749,7 +807,7 @@ function App() {
                 details={galleryDetails[image]}
                 isMissing={Boolean(failedImages[image])}
                 onError={handleImageError}
-                onOpen={setActiveImage}
+                onOpen={handleOpenImage}
                 fallbackCopy={appContent.sections.gallery.fallback}
               />
             ))}
@@ -781,11 +839,20 @@ function App() {
 
         <LokasiKamiSection siteMeta={siteMeta} copy={mapSection} />
 
-        <BookingCalendarSection
-          language={language}
-          siteMeta={siteMeta}
-          copy={bookingSection}
-        />
+        {shouldLoadBookingSection ? (
+          <Suspense fallback={<BookingSectionFallback copy={bookingSection} />}>
+            <BookingCalendarSection
+              language={language}
+              siteMeta={siteMeta}
+              copy={bookingSection}
+            />
+          </Suspense>
+        ) : (
+          <BookingSectionFallback
+            copy={bookingSection}
+            sectionRef={bookingSectionFallbackRef}
+          />
+        )}
 
         <section className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-[2.5rem] border border-white/70 bg-white/85 p-8 shadow-[0_24px_80px_rgba(80,58,35,0.09)] sm:p-10 lg:p-12">
@@ -888,7 +955,15 @@ function App() {
       {activeImage && activeImageDetails ? (
         <div className="fixed inset-0 z-[70] bg-[#1f1712]/88 px-4 py-6 backdrop-blur-sm sm:px-6 lg:px-8">
           <div className="mx-auto flex h-full max-w-6xl items-center justify-center">
-            <div className="grid w-full gap-4 lg:grid-cols-[1.15fr_0.55fr]">
+            <div
+              ref={galleryDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={galleryDialogTitleId}
+              aria-describedby={galleryDialogDescriptionId}
+              tabIndex={-1}
+              className="grid w-full gap-4 outline-none lg:grid-cols-[1.15fr_0.55fr]"
+            >
               <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#120e0b] shadow-[0_32px_120px_rgba(0,0,0,0.35)]">
                 <img
                   src={resolveAssetPath(activeImage)}
@@ -900,8 +975,9 @@ function App() {
               <aside className="flex flex-col justify-between rounded-[2rem] border border-white/10 bg-white/[0.08] p-6 text-[#f8f2ea] shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-8">
                 <div>
                   <button
+                    ref={galleryCloseButtonRef}
                     type="button"
-                    onClick={() => setActiveImage(null)}
+                    onClick={closeGalleryDialog}
                     className="ml-auto inline-flex size-12 items-center justify-center rounded-full border border-white/15 bg-white/10 transition hover:bg-white/[0.16]"
                     aria-label={appContent.sections.footer.modalCloseAria}
                   >
@@ -911,10 +987,16 @@ function App() {
                   <p className="mt-8 text-xs font-semibold uppercase tracking-[0.28em] text-[#e0c4a6]">
                     {activeImageDetails.tag}
                   </p>
-                  <h3 className="mt-4 font-display text-4xl leading-none">
+                  <h3
+                    id={galleryDialogTitleId}
+                    className="mt-4 font-display text-4xl leading-none"
+                  >
                     {activeImageDetails.title}
                   </h3>
-                  <p className="mt-5 text-sm leading-7 text-[#dbc8b7]">
+                  <p
+                    id={galleryDialogDescriptionId}
+                    className="mt-5 text-sm leading-7 text-[#dbc8b7]"
+                  >
                     {activeImageDetails.description}
                   </p>
                 </div>

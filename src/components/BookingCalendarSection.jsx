@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { addMonths, startOfToday } from 'date-fns'
 import {
   AlertCircle,
@@ -10,8 +10,6 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react'
-import { DayPicker } from 'react-day-picker'
-import 'react-day-picker/style.css'
 import {
   buildWhatsAppBookingLink,
   formatBookingReference,
@@ -25,9 +23,12 @@ import {
 } from '../lib/bookingCalendar'
 import { getDateFnsLocale } from '../lib/language'
 import { hasSupabaseConfig, supabase } from '../lib/supabaseClient'
+import { useAccessibleDialog } from '../lib/useAccessibleDialog'
 
 const today = startOfToday()
 const AVAILABILITY_REFRESH_INTERVAL_MS = 30000
+const loadBookingDayPicker = () => import('./BookingDayPicker')
+const BookingDayPicker = lazy(loadBookingDayPicker)
 
 function getInitialInquiryForm() {
   return {
@@ -119,6 +120,11 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
   const availabilityRequestIdRef = useRef(0)
   const availabilityBlocksRef = useRef([])
   const selectedRangeRef = useRef()
+  const calendarDialogRef = useRef(null)
+  const calendarCloseButtonRef = useRef(null)
+  const calendarTriggerRef = useRef(null)
+  const calendarDialogTitleId = useId()
+  const calendarDialogDescriptionId = useId()
   const dayPickerLocale = getDateFnsLocale(language)
 
   useEffect(() => {
@@ -146,27 +152,6 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
 
     return () => mediaQuery.removeEventListener('change', syncMonths)
   }, [])
-
-  useEffect(() => {
-    if (!isCalendarOpen) {
-      return undefined
-    }
-
-    const previousOverflow = document.body.style.overflow
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setIsCalendarOpen(false)
-      }
-    }
-
-    document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isCalendarOpen])
 
   const refreshAvailability = useCallback(
     async ({ background = false } = {}) => {
@@ -275,7 +260,24 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
     .filter((block) => block.stayRange)
   const hasLiveAvailability = hasSupabaseConfig && !availabilityError
 
-  function handleOpenCalendar() {
+  const closeCalendarDialog = useCallback(() => {
+    setIsCalendarOpen(false)
+  }, [])
+
+  useAccessibleDialog({
+    isOpen: isCalendarOpen,
+    dialogRef: calendarDialogRef,
+    onClose: closeCalendarDialog,
+    initialFocusRef: calendarCloseButtonRef,
+    returnFocusRef: calendarTriggerRef,
+  })
+
+  function handleOpenCalendar(event) {
+    if (event?.currentTarget instanceof HTMLElement) {
+      calendarTriggerRef.current = event.currentTarget
+    }
+
+    loadBookingDayPicker()
     setIsCalendarOpen(true)
 
     if (supabase) {
@@ -952,13 +954,16 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
       {isCalendarOpen ? (
         <div
           className="fixed inset-0 z-50 overflow-y-auto bg-[#1d140e]/55 p-4 backdrop-blur-[6px]"
-          onClick={() => setIsCalendarOpen(false)}
+          onClick={closeCalendarDialog}
         >
           <div
+            ref={calendarDialogRef}
             role="dialog"
             aria-modal="true"
-            aria-label={copy.modal.title}
-            className="mx-auto my-4 w-full max-w-4xl rounded-[2rem] border border-[#e4d6c8] bg-[#fcfaf7] p-5 text-[#2f221a] shadow-[0_32px_120px_rgba(29,20,14,0.28)] sm:my-8 sm:p-6"
+            aria-labelledby={calendarDialogTitleId}
+            aria-describedby={calendarDialogDescriptionId}
+            tabIndex={-1}
+            className="mx-auto my-4 w-full max-w-4xl rounded-[2rem] border border-[#e4d6c8] bg-[#fcfaf7] p-5 text-[#2f221a] shadow-[0_32px_120px_rgba(29,20,14,0.28)] outline-none sm:my-8 sm:p-6"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex flex-col gap-4 border-b border-[#eadccf] pb-5 sm:flex-row sm:items-start sm:justify-between">
@@ -966,17 +971,24 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8b6b4a]">
                   {copy.modal.eyebrow}
                 </p>
-                <h4 className="mt-3 text-2xl font-semibold sm:text-[2rem]">
+                <h4
+                  id={calendarDialogTitleId}
+                  className="mt-3 text-2xl font-semibold sm:text-[2rem]"
+                >
                   {copy.modal.title}
                 </h4>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-[#665548] sm:text-base">
+                <p
+                  id={calendarDialogDescriptionId}
+                  className="mt-3 max-w-2xl text-sm leading-7 text-[#665548] sm:text-base"
+                >
                   {copy.modal.description}
                 </p>
               </div>
 
               <button
+                ref={calendarCloseButtonRef}
                 type="button"
-                onClick={() => setIsCalendarOpen(false)}
+                onClick={closeCalendarDialog}
                 className="inline-flex items-center justify-center rounded-full border border-[#eadccf] bg-white p-3 text-[#7a624b] transition hover:border-[#d6c2b0] hover:text-[#2f221a]"
                 aria-label={copy.modal.closeLabel}
               >
@@ -985,20 +997,31 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
             </div>
 
             <div className="booking-calendar mt-6 rounded-[2rem] border border-[#eadccf] bg-white p-4 shadow-[0_20px_60px_rgba(80,58,35,0.08)] sm:p-5">
-              <DayPicker
-                mode="range"
-                locale={dayPickerLocale}
-                min={1}
-                numberOfMonths={monthsToShow}
-                selected={selectedRange}
-                onSelect={handleCalendarRangeSelect}
-                disabled={disabledDays}
-                excludeDisabled
-                fixedWeeks
-                showOutsideDays
-                startMonth={today}
-                endMonth={addMonths(today, 18)}
-              />
+              <Suspense
+                fallback={
+                  <div className="flex min-h-[22rem] items-center justify-center rounded-[1.5rem] bg-[#fcfaf7] text-center text-sm font-medium text-[#665548] sm:min-h-[26rem]">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-[#f7efe5] px-4 py-2">
+                      <LoaderCircle className="size-4 animate-spin" />
+                      {copy.panel.loadingAvailability}
+                    </span>
+                  </div>
+                }
+              >
+                <BookingDayPicker
+                  mode="range"
+                  locale={dayPickerLocale}
+                  min={1}
+                  numberOfMonths={monthsToShow}
+                  selected={selectedRange}
+                  onSelect={handleCalendarRangeSelect}
+                  disabled={disabledDays}
+                  excludeDisabled
+                  fixedWeeks
+                  showOutsideDays
+                  startMonth={today}
+                  endMonth={addMonths(today, 18)}
+                />
+              </Suspense>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
@@ -1059,7 +1082,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
 
                 <button
                   type="button"
-                  onClick={() => setIsCalendarOpen(false)}
+                  onClick={closeCalendarDialog}
                   className="inline-flex items-center justify-center rounded-full bg-[#2f221a] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
                 >
                   {copy.modal.doneLabel}

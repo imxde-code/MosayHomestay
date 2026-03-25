@@ -328,7 +328,7 @@ const localizedSiteData = {
       eyebrow: 'Kalendar Ketersediaan',
       title: 'Semak tarikh tersedia secara lebih tepat dan teratur.',
       description:
-        'Tarikh yang telah disahkan atau ditutup akan ditanda sebagai tidak tersedia. Pilih tarikh masuk dan keluar, hantar permintaan tempahan, kemudian teruskan ke WhatsApp untuk pengesahan akhir.',
+        'Tarikh yang telah disahkan atau ditutup akan ditanda sebagai tidak tersedia. Pilih tarikh masuk dan keluar anda, hantar permintaan, kemudian teruskan ke WhatsApp untuk semakan lanjut.',
       pills: {
         availableDates: 'Tarikh tersedia',
         blockedDates: 'Tarikh ditutup',
@@ -340,19 +340,19 @@ const localizedSiteData = {
       },
       featureList: [
         {
-          title: 'Tarikh dikunci secara automatik',
+          title: 'Tarikh tersedia lebih jelas',
           description:
-            'Kalendar membaca blok tempahan daripada sistem supaya tarikh yang sudah ditempah tidak dipilih semula.',
+            'Tarikh yang sudah ditempah atau tidak tersedia akan terus ditanda pada kalendar supaya anda boleh pilih dengan lebih yakin.',
         },
         {
-          title: 'Sesuai untuk urusan pentadbiran',
+          title: 'Pilih julat penginapan dengan mudah',
           description:
-            'Anda boleh urus tarikh yang diblok atau disahkan terus melalui panel pengurusan tanpa perlu ubah kod website setiap kali ada tempahan baru.',
+            'Semak tarikh masuk, tarikh keluar, dan jumlah malam terus dalam satu langkah yang ringkas.',
         },
         {
-          title: 'Pengesahan akhir tetap mudah',
+          title: 'Sambung pertanyaan di WhatsApp',
           description:
-            'Setiap permintaan akan direkodkan dahulu dalam sistem, kemudian tetamu disambungkan ke WhatsApp dengan mesej yang sudah siap diisi.',
+            'Selepas hantar permintaan, anda boleh terus sambung perbualan di WhatsApp bersama rujukan permintaan anda.',
         },
       ],
       loadError:
@@ -399,7 +399,8 @@ const localizedSiteData = {
         nightsSuffix: 'malam',
       },
       upcomingUnavailableTitle: 'Tarikh tidak tersedia terdekat',
-      unavailableBlockDescription: 'Blok tempahan yang sedang dikunci dalam sistem.',
+      unavailableBlockDescription:
+        'Tarikh ini sudah tidak tersedia untuk pertanyaan baru.',
       noBlockedDatesLive:
         'Tiada blok tarikh ditemui buat masa ini. Semua tarikh yang dipaparkan masih terbuka untuk pertanyaan baru.',
       noBlockedDatesManual:
@@ -414,10 +415,10 @@ const localizedSiteData = {
         notesLabel: 'Nota ringkas (pilihan)',
         notesPlaceholder: 'Contoh: check-in lewat malam atau keperluan tambahan',
         statusNotePrefix:
-          'Permintaan anda akan masuk ke panel admin dahulu sebagai ',
-        statusKeyword: 'Pertanyaan',
+          'Permintaan anda akan kami semak terlebih dahulu. Tempahan hanya dianggap sah selepas ',
+        statusKeyword: 'pengesahan',
         statusNoteSuffix:
-          '. Tempahan hanya dianggap sah selepas pihak Mosay Homestay mengesahkannya.',
+          ' daripada pihak Mosay Homestay.',
         submitLabel: 'Hantar Permintaan',
         submittingLabel: 'Menghantar Permintaan',
         continueWhatsappLabel: 'Teruskan Pertanyaan di WhatsApp',
@@ -753,7 +754,7 @@ const localizedSiteData = {
       eyebrow: 'Availability Calendar',
       title: 'Check available dates with better clarity and structure.',
       description:
-        'Dates that have already been confirmed or blocked are marked as unavailable. Choose your check-in and check-out dates, submit a booking request, then continue to WhatsApp for final confirmation.',
+        'Dates that have already been confirmed or blocked are marked as unavailable. Choose your check-in and check-out dates, send a request, then continue to WhatsApp for follow-up.',
       pills: {
         availableDates: 'Available dates',
         blockedDates: 'Blocked dates',
@@ -765,19 +766,19 @@ const localizedSiteData = {
       },
       featureList: [
         {
-          title: 'Dates lock automatically',
+          title: 'Availability is easier to read',
           description:
-            'The calendar reads booking blocks from the system so already booked dates cannot be selected again.',
+            'Dates that are already booked or unavailable are clearly marked so you can choose with more confidence.',
         },
         {
-          title: 'Made for smoother admin work',
+          title: 'Choose your stay dates easily',
           description:
-            'You can manage blocked or confirmed dates from the admin panel without editing website code every time a new booking comes in.',
+            'Review your check-in, check-out, and total nights in one simple step.',
         },
         {
-          title: 'Final confirmation stays simple',
+          title: 'Continue on WhatsApp',
           description:
-            'Every request is recorded in the system first, then guests are sent to WhatsApp with a prefilled message.',
+            'After sending your request, you can continue the conversation on WhatsApp with your request reference ready.',
         },
       ],
       loadError:
@@ -824,7 +825,8 @@ const localizedSiteData = {
         nightsSuffix: 'nights',
       },
       upcomingUnavailableTitle: 'Upcoming unavailable dates',
-      unavailableBlockDescription: 'These dates are currently locked in the system.',
+      unavailableBlockDescription:
+        'These dates are no longer available for new inquiries.',
       noBlockedDatesLive:
         'No blocked dates were found at the moment. All displayed dates are still open for new inquiries.',
       noBlockedDatesManual:
@@ -839,10 +841,10 @@ const localizedSiteData = {
         notesLabel: 'Short note (optional)',
         notesPlaceholder: 'Example: late check-in or extra requests',
         statusNotePrefix:
-          'Your request will appear in the admin panel first as an ',
-        statusKeyword: 'Inquiry',
+          'Your request will be reviewed first. A booking is only considered confirmed after ',
+        statusKeyword: 'confirmation',
         statusNoteSuffix:
-          '. The booking is only considered confirmed after Mosay Homestay approves it.',
+          ' from Mosay Homestay.',
         submitLabel: 'Send Request',
         submittingLabel: 'Sending Request',
         continueWhatsappLabel: 'Continue Inquiry on WhatsApp',
