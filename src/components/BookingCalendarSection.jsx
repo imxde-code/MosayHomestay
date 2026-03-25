@@ -95,6 +95,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
   const [availabilityError, setAvailabilityError] = useState('')
   const [requestError, setRequestError] = useState('')
   const [requestSuccess, setRequestSuccess] = useState('')
+  const [submittedRequest, setSubmittedRequest] = useState(null)
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false)
   const dayPickerLocale = getDateFnsLocale(language)
 
@@ -193,12 +194,21 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
     setSelectedRange(nextRange)
     setRequestError('')
     setRequestSuccess('')
+    setSubmittedRequest(null)
   }
 
   function clearSelectedDates() {
     setSelectedRange(undefined)
     setRequestError('')
     setRequestSuccess('')
+    setSubmittedRequest(null)
+  }
+
+  function handleGuestsChange(event) {
+    setGuests(event.target.value)
+    setRequestError('')
+    setRequestSuccess('')
+    setSubmittedRequest(null)
   }
 
   function handleInquiryFormChange(event) {
@@ -211,6 +221,13 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
 
     setRequestError('')
     setRequestSuccess('')
+    setSubmittedRequest(null)
+  }
+
+  function handleStartNewInquiry() {
+    setRequestError('')
+    setRequestSuccess('')
+    setSubmittedRequest(null)
   }
 
   async function handleSubmitInquiry(event) {
@@ -260,12 +277,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
 
     const savedRequest = Array.isArray(data) ? data[0] : data
     const requestReference = formatBookingReference(savedRequest?.id)
-
-    setRequestSuccess(
-      `${copy.requestMessages.successPrefix} ${requestReference}${copy.requestMessages.successSuffix}`,
-    )
-
-    const whatsappLink = buildWhatsAppBookingLink({
+    const nextWhatsappLink = buildWhatsAppBookingLink({
       checkIn: selectedStay.checkIn,
       checkOut: selectedStay.checkOut,
       guests,
@@ -275,11 +287,22 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
       language,
     })
 
+    setRequestSuccess(
+      `${copy.requestMessages.successPrefix} ${requestReference}${copy.requestMessages.successSuffix}`,
+    )
+    setSubmittedRequest({
+      guests,
+      checkIn: selectedStay.checkIn,
+      checkOut: selectedStay.checkOut,
+      nights: selectedStay.nights,
+      reference: requestReference,
+      whatsappLink: nextWhatsappLink,
+    })
+
     setInquiryForm(getInitialInquiryForm())
     setSelectedRange(undefined)
     setGuests('8')
     setIsSubmittingRequest(false)
-    window.location.assign(whatsappLink)
   }
 
   return (
@@ -479,7 +502,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                   </span>
                   <select
                     value={guests}
-                    onChange={(event) => setGuests(event.target.value)}
+                    onChange={handleGuestsChange}
                     className="w-full rounded-2xl border border-[#eadccf] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
                   >
                     {[4, 6, 8, 10, 12].map((option) => (
@@ -567,111 +590,213 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                 )}
               </div>
 
-              <form className="mt-7 space-y-5" onSubmit={handleSubmitInquiry}>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                      {copy.form.guestNameLabel}
-                    </span>
-                    <input
-                      type="text"
-                      name="guestName"
-                      value={inquiryForm.guestName}
-                      onChange={handleInquiryFormChange}
-                      className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                      placeholder={copy.form.guestNamePlaceholder}
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                      {copy.form.guestPhoneLabel}
-                    </span>
-                    <input
-                      type="text"
-                      name="guestPhone"
-                      value={inquiryForm.guestPhone}
-                      onChange={handleInquiryFormChange}
-                      className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                      placeholder={copy.form.guestPhonePlaceholder}
-                    />
-                  </label>
-                </div>
-
-                <label className="block">
-                  <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                    {copy.form.guestEmailLabel}
-                  </span>
-                  <input
-                    type="email"
-                    name="guestEmail"
-                    value={inquiryForm.guestEmail}
-                    onChange={handleInquiryFormChange}
-                    className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                    placeholder={copy.form.guestEmailPlaceholder}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                    {copy.form.notesLabel}
-                  </span>
-                  <textarea
-                    name="notes"
-                    value={inquiryForm.notes}
-                    onChange={handleInquiryFormChange}
-                    rows="3"
-                    className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                    placeholder={copy.form.notesPlaceholder}
-                  />
-                </label>
-
-                <div className="rounded-[1.5rem] border border-[#eadccf] bg-[#fcfaf7] p-5 text-sm leading-7 text-[#665548]">
-                  {copy.form.statusNotePrefix}
-                  <span className="font-semibold text-[#2f221a]">
-                    {copy.form.statusKeyword}
-                  </span>
-                  {copy.form.statusNoteSuffix}
-                </div>
-
-                {requestError ? (
-                  <div className="rounded-[1.5rem] border border-[#e7c3bc] bg-[#fff2ef] px-4 py-4 text-sm leading-7 text-[#9a4b3c]">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="mt-1 size-4 shrink-0" />
-                      <p>{requestError}</p>
+              {submittedRequest ? (
+                <div
+                  className="mt-7 rounded-[1.75rem] border border-[#cfdccf] bg-[#eef7ef] p-5 sm:p-6"
+                  role="status"
+                >
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck className="mt-1 size-5 shrink-0 text-[#2e6a44]" />
+                    <div>
+                      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#2e6a44]">
+                        {copy.requestMessages.successTitle}
+                      </p>
+                      <p className="mt-3 text-sm leading-7 text-[#2e6a44]">
+                        {requestSuccess}
+                      </p>
                     </div>
                   </div>
-                ) : null}
 
-                {requestSuccess ? (
-                  <div className="rounded-[1.5rem] border border-[#cfdccf] bg-[#eef7ef] px-4 py-4 text-sm leading-7 text-[#2e6a44]">
-                    <div className="flex items-start gap-3">
-                      <ShieldCheck className="mt-1 size-4 shrink-0" />
-                      <p>{requestSuccess}</p>
+                  <div className="mt-5 rounded-[1.5rem] border border-[#d4e5d4] bg-white/85 p-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6b7d69]">
+                      {copy.requestMessages.referenceLabel}
+                    </p>
+                    <p className="mt-3 text-2xl font-semibold text-[#1f3d2c]">
+                      {submittedRequest.reference}
+                    </p>
+
+                    <div className="mt-4 grid gap-3 text-sm leading-7 text-[#385341] sm:grid-cols-2">
+                      <p>
+                        {copy.summary.checkIn}:{' '}
+                        <span className="font-semibold">
+                          {formatDisplayDate(submittedRequest.checkIn, language)}
+                        </span>
+                      </p>
+                      <p>
+                        {copy.summary.checkOut}:{' '}
+                        <span className="font-semibold">
+                          {formatDisplayDate(submittedRequest.checkOut, language)}
+                        </span>
+                      </p>
+                      <p>
+                        {copy.summary.nights}:{' '}
+                        <span className="font-semibold">
+                          {submittedRequest.nights} {copy.summary.nightsSuffix}
+                        </span>
+                      </p>
+                      <p>
+                        {copy.summary.guests}:{' '}
+                        <span className="font-semibold">
+                          {submittedRequest.guests} {copy.guestsSuffix}
+                        </span>
+                      </p>
                     </div>
                   </div>
-                ) : null}
 
-                {hasSupabaseConfig ? (
-                  selectedStay ? (
-                    <button
-                      type="submit"
-                      disabled={isSubmittingRequest}
-                      className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22] disabled:cursor-not-allowed disabled:opacity-70"
+                  <p className="mt-5 text-sm leading-7 text-[#385341]">
+                    {copy.requestMessages.successWhatsappHelp}
+                  </p>
+
+                  <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                    <a
+                      href={submittedRequest.whatsappLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
                     >
-                      {isSubmittingRequest ? (
-                        <>
-                          <LoaderCircle className="size-4 animate-spin" />
-                          {copy.form.submittingLabel}
-                        </>
-                      ) : (
-                        <>
-                          {copy.form.submitLabel}
-                          <MessageCircle className="size-4" />
-                          <ArrowRight className="size-4" />
-                        </>
-                      )}
+                      {copy.form.continueWhatsappLabel}
+                      <MessageCircle className="size-4" />
+                      <ArrowRight className="size-4" />
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={handleStartNewInquiry}
+                      className="inline-flex items-center justify-center rounded-full border border-[#cbdacb] bg-white px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#2f221a] transition hover:-translate-y-0.5 hover:border-[#b8cbb8]"
+                    >
+                      {copy.requestMessages.newRequestLabel}
                     </button>
+                  </div>
+
+                  <p className="mt-5 text-sm leading-7 text-[#385341]">
+                    {copy.requestMessages.whatsappFallback}{' '}
+                    <a
+                      href={siteMeta.phoneHref}
+                      className="font-semibold text-[#1f3d2c] underline decoration-[#b8cbb8] underline-offset-4"
+                    >
+                      {siteMeta.phoneDisplay}
+                    </a>
+                    .
+                  </p>
+                </div>
+              ) : (
+                <form className="mt-7 space-y-5" onSubmit={handleSubmitInquiry}>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                        {copy.form.guestNameLabel}
+                      </span>
+                      <input
+                        type="text"
+                        name="guestName"
+                        value={inquiryForm.guestName}
+                        onChange={handleInquiryFormChange}
+                        className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                        placeholder={copy.form.guestNamePlaceholder}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                        {copy.form.guestPhoneLabel}
+                      </span>
+                      <input
+                        type="text"
+                        name="guestPhone"
+                        value={inquiryForm.guestPhone}
+                        onChange={handleInquiryFormChange}
+                        className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                        placeholder={copy.form.guestPhonePlaceholder}
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                      {copy.form.guestEmailLabel}
+                    </span>
+                    <input
+                      type="email"
+                      name="guestEmail"
+                      value={inquiryForm.guestEmail}
+                      onChange={handleInquiryFormChange}
+                      className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                      placeholder={copy.form.guestEmailPlaceholder}
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                      {copy.form.notesLabel}
+                    </span>
+                    <textarea
+                      name="notes"
+                      value={inquiryForm.notes}
+                      onChange={handleInquiryFormChange}
+                      rows="3"
+                      className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                      placeholder={copy.form.notesPlaceholder}
+                    />
+                  </label>
+
+                  <div className="rounded-[1.5rem] border border-[#eadccf] bg-[#fcfaf7] p-5 text-sm leading-7 text-[#665548]">
+                    {copy.form.statusNotePrefix}
+                    <span className="font-semibold text-[#2f221a]">
+                      {copy.form.statusKeyword}
+                    </span>
+                    {copy.form.statusNoteSuffix}
+                  </div>
+
+                  {requestError ? (
+                    <div className="rounded-[1.5rem] border border-[#e7c3bc] bg-[#fff2ef] px-4 py-4 text-sm leading-7 text-[#9a4b3c]">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="mt-1 size-4 shrink-0" />
+                        <p>{requestError}</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {hasSupabaseConfig ? (
+                    selectedStay ? (
+                      <button
+                        type="submit"
+                        disabled={isSubmittingRequest}
+                        className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22] disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {isSubmittingRequest ? (
+                          <>
+                            <LoaderCircle className="size-4 animate-spin" />
+                            {copy.form.submittingLabel}
+                          </>
+                        ) : (
+                          <>
+                            {copy.form.submitLabel}
+                            <MessageCircle className="size-4" />
+                            <ArrowRight className="size-4" />
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#d7c8bb] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#6f5f53]"
+                      >
+                        {copy.form.selectDatesFirstLabel}
+                        <CalendarDays className="size-4" />
+                      </button>
+                    )
+                  ) : selectedStay ? (
+                    <a
+                      href={whatsappLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
+                    >
+                      {copy.form.continueWhatsappLabel}
+                      <MessageCircle className="size-4" />
+                      <ArrowRight className="size-4" />
+                    </a>
                   ) : (
                     <button
                       type="button"
@@ -681,29 +806,9 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                       {copy.form.selectDatesFirstLabel}
                       <CalendarDays className="size-4" />
                     </button>
-                  )
-                ) : selectedStay ? (
-                  <a
-                    href={whatsappLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
-                  >
-                    {copy.form.continueWhatsappLabel}
-                    <MessageCircle className="size-4" />
-                    <ArrowRight className="size-4" />
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#d7c8bb] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#6f5f53]"
-                  >
-                    {copy.form.selectDatesFirstLabel}
-                    <CalendarDays className="size-4" />
-                  </button>
-                )}
-              </form>
+                  )}
+                </form>
+              )}
 
               {!hasSupabaseConfig && import.meta.env.DEV ? (
                 <div className="mt-5 rounded-[1.5rem] border border-dashed border-[#d8c8b4] bg-white px-4 py-4 text-sm leading-7 text-[#665548]">

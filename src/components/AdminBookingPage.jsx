@@ -122,6 +122,9 @@ function AdminBookingPage() {
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
   const [isSigningIn, setIsSigningIn] = useState(false)
+  const [isCheckingAdminAccess, setIsCheckingAdminAccess] = useState(false)
+  const [isAdminUser, setIsAdminUser] = useState(false)
+  const [adminAccessError, setAdminAccessError] = useState('')
   const [bookings, setBookings] = useState([])
   const [isLoadingBookings, setIsLoadingBookings] = useState(false)
   const [bookingsError, setBookingsError] = useState('')
@@ -172,7 +175,68 @@ function AdminBookingPage() {
   }, [])
 
   useEffect(() => {
-    if (!supabase || !session) {
+    let isCancelled = false
+
+    async function syncAdminAccess() {
+      if (!supabase || !session) {
+        if (isCancelled) {
+          return
+        }
+
+        setIsCheckingAdminAccess(false)
+        setIsAdminUser(false)
+        setAdminAccessError('')
+        setBookings([])
+        setIsLoadingBookings(false)
+        setBookingsError('')
+        setForm(getInitialFormState())
+        setEditingId(null)
+        setFormError('')
+        setActionMessage('')
+        return
+      }
+
+      setIsCheckingAdminAccess(true)
+      setIsAdminUser(false)
+      setAdminAccessError('')
+      setBookings([])
+      setIsLoadingBookings(false)
+      setBookingsError('')
+      setForm(getInitialFormState())
+      setEditingId(null)
+      setFormError('')
+      setActionMessage('')
+
+      const { data, error } = await supabase.rpc('is_current_user_admin')
+
+      if (isCancelled) {
+        return
+      }
+
+      if (error) {
+        setAdminAccessError(
+          'Akses admin tidak dapat disahkan sekarang. Sila log keluar dan cuba semula.',
+        )
+      } else if (!data) {
+        setAdminAccessError(
+          'Akaun ini berjaya log masuk tetapi belum diberi akses admin booking.',
+        )
+      } else {
+        setIsAdminUser(true)
+      }
+
+      setIsCheckingAdminAccess(false)
+    }
+
+    syncAdminAccess()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [session])
+
+  useEffect(() => {
+    if (!supabase || !session || !isAdminUser) {
       return undefined
     }
 
@@ -207,7 +271,7 @@ function AdminBookingPage() {
     return () => {
       isCancelled = true
     }
-  }, [refreshToken, session])
+  }, [isAdminUser, refreshToken, session])
 
   let inquiryCount = 0
   let confirmedCount = 0
@@ -634,6 +698,36 @@ function AdminBookingPage() {
                 </button>
               </form>
             </section>
+          </div>
+        ) : isCheckingAdminAccess ? (
+          <div className="mt-8 rounded-[2rem] border border-white/70 bg-white/88 p-8 text-center shadow-[0_24px_80px_rgba(80,58,35,0.08)]">
+            <LoaderCircle className="mx-auto size-8 animate-spin text-[#8b6b4a]" />
+            <p className="mt-4 text-sm font-medium text-[#665548]">
+              Menyemak akses admin...
+            </p>
+          </div>
+        ) : !isAdminUser ? (
+          <div className="mt-8 rounded-[2.5rem] border border-white/70 bg-white/88 p-8 shadow-[0_24px_80px_rgba(80,58,35,0.08)] sm:p-10">
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#e7c3bc] bg-[#fff2ef] px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#9a4b3c]">
+              <AlertCircle className="size-4" />
+              Akses Admin Diperlukan
+            </p>
+            <h2 className="mt-6 text-3xl font-semibold text-[#2f221a] sm:text-4xl">
+              Akaun ini belum dibenarkan untuk urus booking.
+            </h2>
+            <p className="mt-4 max-w-3xl text-base leading-8 text-[#665548]">
+              {adminAccessError}{' '}
+              Semak semula senarai admin dalam Supabase atau log masuk menggunakan
+              akaun admin yang betul.
+            </p>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#d8c8b4] bg-white px-4 py-2 text-sm font-semibold text-[#2f221a] transition hover:-translate-y-0.5 hover:border-[#c7b39b]"
+            >
+              <LogOut className="size-4" />
+              Log Keluar
+            </button>
           </div>
         ) : (
           <div className="mt-8 grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">

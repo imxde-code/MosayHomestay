@@ -413,7 +413,7 @@ const localizedSiteData = {
         statusKeyword: 'Pertanyaan',
         statusNoteSuffix:
           '. Tempahan hanya dianggap sah selepas pihak Mosay Homestay mengesahkannya.',
-        submitLabel: 'Hantar Permintaan & Terus ke WhatsApp',
+        submitLabel: 'Hantar Permintaan',
         submittingLabel: 'Menghantar Permintaan',
         continueWhatsappLabel: 'Teruskan Pertanyaan di WhatsApp',
         selectDatesFirstLabel: 'Pilih Tarikh Dahulu',
@@ -430,9 +430,16 @@ const localizedSiteData = {
         invalidDates:
           'Tarikh masuk dan keluar tidak sah. Sila semak semula pilihan anda.',
         fallbackError: 'Permintaan belum berjaya dihantar. Sila cuba lagi.',
+        successTitle: 'Permintaan anda berjaya direkodkan.',
         successPrefix: 'Permintaan anda telah direkodkan dengan rujukan',
         successSuffix:
-          '. WhatsApp akan dibuka sebentar lagi untuk pengesahan terus.',
+          '. Simpan rujukan ini dan teruskan ke WhatsApp apabila anda sedia.',
+        referenceLabel: 'Rujukan permintaan',
+        successWhatsappHelp:
+          'Butang di bawah akan membuka mesej WhatsApp yang sudah siap bersama rujukan permintaan anda.',
+        whatsappFallback:
+          'Jika WhatsApp tidak terbuka atau anda mahu sambung kemudian, simpan rujukan ini dan hubungi kami di',
+        newRequestLabel: 'Buat Permintaan Baru',
       },
       devHint:
         'Lengkapkan konfigurasi sambungan data untuk aktifkan ketersediaan semasa dan permintaan tempahan automatik.',
@@ -822,7 +829,7 @@ const localizedSiteData = {
         statusKeyword: 'Inquiry',
         statusNoteSuffix:
           '. The booking is only considered confirmed after Mosay Homestay approves it.',
-        submitLabel: 'Send Request & Continue to WhatsApp',
+        submitLabel: 'Send Request',
         submittingLabel: 'Sending Request',
         continueWhatsappLabel: 'Continue Inquiry on WhatsApp',
         selectDatesFirstLabel: 'Select Dates First',
@@ -839,9 +846,16 @@ const localizedSiteData = {
         invalidDates:
           'The selected check-in and check-out dates are not valid. Please review your selection.',
         fallbackError: 'The request could not be sent yet. Please try again.',
+        successTitle: 'Your request has been recorded successfully.',
         successPrefix: 'Your request has been recorded with reference',
         successSuffix:
-          '. WhatsApp will open in a moment so you can continue directly.',
+          '. Please keep this reference and continue to WhatsApp when you are ready.',
+        referenceLabel: 'Request reference',
+        successWhatsappHelp:
+          'The button below will open a prefilled WhatsApp message with your request reference included.',
+        whatsappFallback:
+          'If WhatsApp does not open or you prefer to continue later, keep this reference and contact us at',
+        newRequestLabel: 'Send New Request',
       },
       devHint:
         'Complete the data connection setup to enable live availability and automatic booking requests.',

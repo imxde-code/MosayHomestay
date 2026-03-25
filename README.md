@@ -43,8 +43,18 @@ Jika secret belum disambungkan, laman masih boleh dibuka tetapi seksyen kalendar
 
 1. Buka `Authentication` dalam dashboard Supabase.
 2. Cipta seorang pengguna admin menggunakan email dan kata laluan anda sendiri.
-3. Jika anda mahu lebih selamat, tutup public sign up supaya hanya anda boleh log masuk.
-4. Buka panel admin di `#/admin`.
+3. Tambah pengguna itu ke senarai admin booking:
+
+```sql
+insert into public.admin_users (user_id)
+select id
+from auth.users
+where email = 'admin@mosay.com'
+on conflict (user_id) do nothing;
+```
+
+4. Jika anda mahu lebih selamat, tutup public sign up supaya hanya anda boleh log masuk.
+5. Buka panel admin di `#/admin`.
 
 Contoh URL:
 
