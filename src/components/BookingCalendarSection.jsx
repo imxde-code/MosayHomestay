@@ -15,6 +15,7 @@ import 'react-day-picker/style.css'
 import { siteMeta } from '../data/siteData'
 import {
   buildWhatsAppBookingLink,
+  formatBookingReference,
   formatDateKey,
   formatMalayDate,
   formatMalayShortDate,
@@ -25,6 +26,45 @@ import {
 import { hasSupabaseConfig, supabase } from '../lib/supabaseClient'
 
 const today = startOfToday()
+
+function getInitialInquiryForm() {
+  return {
+    guestName: '',
+    guestPhone: '',
+    guestEmail: '',
+    notes: '',
+  }
+}
+
+function getFriendlyPublicRequestError(error) {
+  const message = error?.message ?? ''
+
+  if (
+    message.includes('Tarikh ini sudah tidak tersedia') ||
+    message.includes('bookings_no_overlapping_active_dates') ||
+    message.includes('conflicting key value violates exclusion constraint')
+  ) {
+    return 'Tarikh ini baru sahaja tidak tersedia. Sila pilih tarikh lain sebelum hantar permintaan baru.'
+  }
+
+  if (message.includes('Nama tetamu diperlukan')) {
+    return 'Sila isi nama tetamu untuk teruskan.'
+  }
+
+  if (message.includes('Nombor telefon diperlukan')) {
+    return 'Sila isi nombor telefon untuk teruskan.'
+  }
+
+  if (message.includes('Jumlah tetamu tidak sah')) {
+    return 'Jumlah tetamu yang dimasukkan tidak sah.'
+  }
+
+  if (message.includes('Tarikh masuk dan keluar tidak sah')) {
+    return 'Tarikh masuk dan keluar tidak sah. Sila semak semula pilihan anda.'
+  }
+
+  return message || 'Permintaan belum berjaya dihantar. Sila cuba lagi.'
+}
 
 function AvailabilityPill({ label, tone = 'default' }) {
   const styles = {
@@ -46,11 +86,15 @@ function BookingCalendarSection() {
   const [selectedRange, setSelectedRange] = useState()
   const [guests, setGuests] = useState('8')
   const [monthsToShow, setMonthsToShow] = useState(2)
+  const [inquiryForm, setInquiryForm] = useState(getInitialInquiryForm)
   const [availabilityBlocks, setAvailabilityBlocks] = useState([])
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(
     hasSupabaseConfig,
   )
   const [availabilityError, setAvailabilityError] = useState('')
+  const [requestError, setRequestError] = useState('')
+  const [requestSuccess, setRequestSuccess] = useState('')
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false)
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1024px)')
@@ -123,6 +167,86 @@ function BookingCalendarSection() {
     .filter((block) => block.stayRange)
   const hasLiveAvailability = hasSupabaseConfig && !availabilityError
 
+  function handleInquiryFormChange(event) {
+    const { name, value } = event.target
+
+    setInquiryForm((current) => ({
+      ...current,
+      [name]: value,
+    }))
+
+    setRequestError('')
+    setRequestSuccess('')
+  }
+
+  async function handleSubmitInquiry(event) {
+    event.preventDefault()
+
+    if (!selectedStay) {
+      setRequestError('Sila pilih tarikh masuk dan tarikh keluar dahulu.')
+      return
+    }
+
+    if (!supabase) {
+      setRequestError(
+        'Permintaan automatik belum diaktifkan. Sila teruskan melalui WhatsApp buat sementara waktu.',
+      )
+      return
+    }
+
+    if (!inquiryForm.guestName.trim()) {
+      setRequestError('Sila isi nama tetamu untuk teruskan.')
+      return
+    }
+
+    if (!inquiryForm.guestPhone.trim()) {
+      setRequestError('Sila isi nombor telefon untuk teruskan.')
+      return
+    }
+
+    setIsSubmittingRequest(true)
+    setRequestError('')
+    setRequestSuccess('')
+
+    const { data, error } = await supabase.rpc('create_public_booking_request', {
+      guest_name_input: inquiryForm.guestName.trim(),
+      guest_phone_input: inquiryForm.guestPhone.trim(),
+      guest_email_input: inquiryForm.guestEmail.trim() || null,
+      guest_count_input: Number(guests),
+      start_date_input: formatDateKey(selectedStay.checkIn),
+      end_date_input: formatDateKey(selectedStay.checkOut),
+      notes_input: inquiryForm.notes.trim() || null,
+    })
+
+    if (error) {
+      setRequestError(getFriendlyPublicRequestError(error))
+      setIsSubmittingRequest(false)
+      return
+    }
+
+    const savedRequest = Array.isArray(data) ? data[0] : data
+    const requestReference = formatBookingReference(savedRequest?.id)
+
+    setRequestSuccess(
+      `Permintaan anda telah direkodkan dengan rujukan ${requestReference}. WhatsApp akan dibuka sebentar lagi untuk pengesahan terus.`,
+    )
+
+    const whatsappLink = buildWhatsAppBookingLink({
+      checkIn: selectedStay.checkIn,
+      checkOut: selectedStay.checkOut,
+      guests,
+      nights: selectedStay.nights,
+      guestName: inquiryForm.guestName.trim(),
+      requestReference,
+    })
+
+    setInquiryForm(getInitialInquiryForm())
+    setSelectedRange(undefined)
+    setGuests('8')
+    setIsSubmittingRequest(false)
+    window.location.assign(whatsappLink)
+  }
+
   return (
     <section
       id="tempahan"
@@ -139,8 +263,8 @@ function BookingCalendarSection() {
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-8 text-[#dbc8b7] sm:text-lg">
               Tarikh yang telah disahkan atau ditutup akan ditanda sebagai tidak
-              tersedia. Pilih tarikh masuk dan keluar, kemudian teruskan
-              pertanyaan melalui WhatsApp untuk pengesahan akhir.
+              tersedia. Pilih tarikh masuk dan keluar, hantar permintaan
+              tempahan, kemudian teruskan ke WhatsApp untuk pengesahan akhir.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -184,7 +308,8 @@ function BookingCalendarSection() {
                 <div>
                   <p className="font-semibold">Pengesahan akhir tetap mudah</p>
                   <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                    Tetamu masih boleh teruskan pertanyaan ke WhatsApp di{' '}
+                    Setiap permintaan akan direkodkan dahulu dalam sistem,
+                    kemudian tetamu disambungkan ke WhatsApp di{' '}
                     {siteMeta.phoneDisplay} dengan mesej yang sudah siap diisi.
                   </p>
                 </div>
@@ -274,7 +399,7 @@ function BookingCalendarSection() {
 
               <div className="mt-7 rounded-[1.5rem] bg-[#f7efe5] p-5">
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                  Ringkasan tempahan
+                  Ringkasan permintaan
                 </p>
 
                 {selectedStay ? (
@@ -344,32 +469,147 @@ function BookingCalendarSection() {
                 )}
               </div>
 
-              {selectedStay ? (
-                <a
-                  href={whatsappLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-7 inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
-                >
-                  Teruskan Pertanyaan di WhatsApp
-                  <MessageCircle className="size-4" />
-                  <ArrowRight className="size-4" />
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  className="mt-7 inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#d7c8bb] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#6f5f53]"
-                >
-                  Pilih Tarikh Dahulu
-                  <CalendarDays className="size-4" />
-                </button>
-              )}
+              <form className="mt-7 space-y-5" onSubmit={handleSubmitInquiry}>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                      Nama tetamu
+                    </span>
+                    <input
+                      type="text"
+                      name="guestName"
+                      value={inquiryForm.guestName}
+                      onChange={handleInquiryFormChange}
+                      className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                      placeholder="Contoh: Keluarga Ahmad"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                      Nombor telefon
+                    </span>
+                    <input
+                      type="text"
+                      name="guestPhone"
+                      value={inquiryForm.guestPhone}
+                      onChange={handleInquiryFormChange}
+                      className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                      placeholder="Contoh: 019-268 3116"
+                    />
+                  </label>
+                </div>
+
+                <label className="block">
+                  <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                    Email (pilihan)
+                  </span>
+                  <input
+                    type="email"
+                    name="guestEmail"
+                    value={inquiryForm.guestEmail}
+                    onChange={handleInquiryFormChange}
+                    className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                    placeholder="nama@email.com"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                    Nota ringkas (pilihan)
+                  </span>
+                  <textarea
+                    name="notes"
+                    value={inquiryForm.notes}
+                    onChange={handleInquiryFormChange}
+                    rows="3"
+                    className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                    placeholder="Contoh: check-in lewat malam atau keperluan tambahan"
+                  />
+                </label>
+
+                <div className="rounded-[1.5rem] border border-[#eadccf] bg-[#fcfaf7] p-5 text-sm leading-7 text-[#665548]">
+                  Permintaan anda akan masuk ke panel admin dahulu sebagai{' '}
+                  <span className="font-semibold text-[#2f221a]">Pertanyaan</span>.
+                  Tempahan hanya dianggap sah selepas pihak Mosay Homestay
+                  mengesahkannya.
+                </div>
+
+                {requestError ? (
+                  <div className="rounded-[1.5rem] border border-[#e7c3bc] bg-[#fff2ef] px-4 py-4 text-sm leading-7 text-[#9a4b3c]">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="mt-1 size-4 shrink-0" />
+                      <p>{requestError}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {requestSuccess ? (
+                  <div className="rounded-[1.5rem] border border-[#cfdccf] bg-[#eef7ef] px-4 py-4 text-sm leading-7 text-[#2e6a44]">
+                    <div className="flex items-start gap-3">
+                      <ShieldCheck className="mt-1 size-4 shrink-0" />
+                      <p>{requestSuccess}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {hasSupabaseConfig ? (
+                  selectedStay ? (
+                    <button
+                      type="submit"
+                      disabled={isSubmittingRequest}
+                      className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isSubmittingRequest ? (
+                        <>
+                          <LoaderCircle className="size-4 animate-spin" />
+                          Menghantar Permintaan
+                        </>
+                      ) : (
+                        <>
+                          Hantar Permintaan & Terus ke WhatsApp
+                          <MessageCircle className="size-4" />
+                          <ArrowRight className="size-4" />
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#d7c8bb] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#6f5f53]"
+                    >
+                      Pilih Tarikh Dahulu
+                      <CalendarDays className="size-4" />
+                    </button>
+                  )
+                ) : selectedStay ? (
+                  <a
+                    href={whatsappLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
+                  >
+                    Teruskan Pertanyaan di WhatsApp
+                    <MessageCircle className="size-4" />
+                    <ArrowRight className="size-4" />
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#d7c8bb] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#6f5f53]"
+                  >
+                    Pilih Tarikh Dahulu
+                    <CalendarDays className="size-4" />
+                  </button>
+                )}
+              </form>
 
               {!hasSupabaseConfig && import.meta.env.DEV ? (
                 <div className="mt-5 rounded-[1.5rem] border border-dashed border-[#d8c8b4] bg-white px-4 py-4 text-sm leading-7 text-[#665548]">
                   Lengkapkan konfigurasi sambungan data untuk aktifkan
-                  ketersediaan semasa secara automatik.
+                  ketersediaan semasa dan permintaan tempahan automatik.
                 </div>
               ) : null}
             </div>

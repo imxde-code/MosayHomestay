@@ -37,6 +37,20 @@ export function formatMalayShortDate(value) {
   return date ? format(date, 'd MMM', { locale: ms }) : '-'
 }
 
+export function formatBookingReference(value) {
+  if (!value) {
+    return '-'
+  }
+
+  const normalizedValue = String(value).trim()
+
+  if (!normalizedValue) {
+    return '-'
+  }
+
+  return `MOSAY-${normalizedValue.split('-')[0].toUpperCase()}`
+}
+
 export function getDisabledDateRanges(blocks) {
   return blocks
     .map(getBlockedStayRange)
@@ -85,15 +99,27 @@ export function getSelectedStay(range) {
   }
 }
 
-export function buildWhatsAppBookingLink({ checkIn, checkOut, guests, nights }) {
+export function buildWhatsAppBookingLink({
+  checkIn,
+  checkOut,
+  guests,
+  nights,
+  guestName,
+  requestReference,
+}) {
   const message = [
-    'Salam Mosay Homestay, saya berminat untuk semak ketersediaan tarikh.',
+    guestName
+      ? `Salam Mosay Homestay, saya ${guestName} dan saya berminat untuk semak ketersediaan tarikh.`
+      : 'Salam Mosay Homestay, saya berminat untuk semak ketersediaan tarikh.',
+    requestReference ? `Rujukan permintaan: ${requestReference}` : null,
     `Tarikh masuk: ${formatMalayDate(checkIn)}`,
     `Tarikh keluar: ${formatMalayDate(checkOut)}`,
     `Jumlah malam: ${nights} malam`,
     `Jumlah tetamu: ${guests} orang`,
     'Mohon sahkan sama ada tarikh ini masih tersedia. Terima kasih.',
-  ].join('\n')
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   return `https://wa.me/60192683116?text=${encodeURIComponent(message)}`
 }

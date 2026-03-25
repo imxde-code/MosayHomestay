@@ -9,7 +9,8 @@ Laman web React + Vite + Tailwind untuk Mosay Homestay di Shah Alam.
 - CTA tempahan terus ke WhatsApp
 - Galeri dinamik dengan lightbox
 - Kalendar ketersediaan dengan Supabase
-- Panel admin untuk urus booking terus dari website
+- Permintaan tempahan terus masuk ke panel admin sebelum sambung ke WhatsApp
+- Panel admin untuk urus dan sahkan booking terus dari website
 
 ## Jalankan Projek
 
@@ -29,13 +30,14 @@ npm run build
 1. Cipta project Supabase baru.
 2. Buka `SQL Editor` dan jalankan fail `supabase/migrations/20260324153000_booking_availability.sql`.
 3. Jalankan juga fail `supabase/migrations/20260325003000_admin_booking_access.sql` untuk akses panel admin.
-4. Salin `.env.example` kepada `.env`.
-5. Isi `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY` dengan nilai project anda.
-6. Untuk GitHub Pages, tambah secret repo dengan nama yang sama:
+4. Jalankan fail `supabase/migrations/20260325011500_public_booking_requests.sql` supaya tetamu boleh hantar permintaan tempahan dari laman web.
+5. Salin `.env.example` kepada `.env`.
+6. Isi `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY` dengan nilai project anda.
+7. Untuk GitHub Pages, tambah secret repo dengan nama yang sama:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 
-Jika secret belum disambungkan, laman masih boleh dibuka tetapi seksyen kalendar akan berjalan dalam mod manual sementara.
+Jika secret belum disambungkan, laman masih boleh dibuka tetapi seksyen kalendar dan permintaan tempahan akan berjalan dalam mod manual sementara.
 
 ## Setup Panel Admin
 
@@ -73,6 +75,14 @@ insert into public.bookings (
   'Tempahan contoh untuk uji kalendar'
 );
 ```
+
+## Flow Tempahan Semasa
+
+1. Tetamu pilih tarikh dan isi maklumat ringkas pada laman utama.
+2. Sistem simpan permintaan itu sebagai status `inquiry`.
+3. Tetamu terus disambungkan ke WhatsApp dengan mesej yang sudah siap diisi bersama rujukan permintaan.
+4. Admin buka `#/admin` untuk sahkan atau batalkan permintaan.
+5. Status `confirmed` dan `blocked` akan terus menutup tarikh pada kalendar pelanggan.
 
 ## Kemaskini Gambar Galeri
 

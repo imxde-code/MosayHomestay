@@ -14,7 +14,10 @@ import {
   UserRound,
   XCircle,
 } from 'lucide-react'
-import { formatMalayDate } from '../lib/bookingCalendar'
+import {
+  formatBookingReference,
+  formatMalayDate,
+} from '../lib/bookingCalendar'
 import { hasSupabaseConfig, supabase } from '../lib/supabaseClient'
 
 const statusLabels = {
@@ -99,6 +102,17 @@ function getFriendlyBookingError(error) {
   }
 
   return message || 'Tindakan tidak berjaya disimpan. Sila cuba lagi.'
+}
+
+function formatMalayDateTime(value) {
+  if (!value) {
+    return '-'
+  }
+
+  return new Intl.DateTimeFormat('ms-MY', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
 }
 
 function AdminBookingPage() {
@@ -195,12 +209,15 @@ function AdminBookingPage() {
     }
   }, [refreshToken, session])
 
+  let inquiryCount = 0
   let confirmedCount = 0
   let blockedCount = 0
   let cancelledCount = 0
 
   bookings.forEach((booking) => {
-    if (booking.status === 'confirmed') {
+    if (booking.status === 'inquiry') {
+      inquiryCount += 1
+    } else if (booking.status === 'confirmed') {
       confirmedCount += 1
     } else if (booking.status === 'blocked') {
       blockedCount += 1
@@ -208,6 +225,17 @@ function AdminBookingPage() {
       cancelledCount += 1
     }
   })
+
+  const inquiryBookings = bookings
+    .filter((booking) => booking.status === 'inquiry')
+    .sort((left, right) => {
+      const leftTime = new Date(left.created_at ?? 0).getTime()
+      const rightTime = new Date(right.created_at ?? 0).getTime()
+
+      return rightTime - leftTime
+    })
+
+  const managedBookings = bookings.filter((booking) => booking.status !== 'inquiry')
 
   function resetForm() {
     setForm(getInitialFormState())
@@ -286,7 +314,7 @@ function AdminBookingPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  async function handleCancelBooking(booking) {
+  async function handleUpdateBookingStatus(booking, nextStatus, successMessage) {
     if (!supabase) {
       return
     }
@@ -296,7 +324,7 @@ function AdminBookingPage() {
 
     const { error } = await supabase
       .from('bookings')
-      .update({ status: 'cancelled' })
+      .update({ status: nextStatus })
       .eq('id', booking.id)
 
     if (error) {
@@ -308,8 +336,28 @@ function AdminBookingPage() {
       resetForm()
     }
 
-    setActionMessage('Booking telah ditandakan sebagai dibatalkan.')
+    setActionMessage(successMessage)
     refreshBookings()
+  }
+
+  async function handleConfirmBooking(booking) {
+    await handleUpdateBookingStatus(
+      booking,
+      'confirmed',
+      booking.status === 'inquiry'
+        ? 'Permintaan telah disahkan dan tarikh kini ditutup pada kalendar pelanggan.'
+        : 'Booking telah ditandakan sebagai disahkan.',
+    )
+  }
+
+  async function handleCancelBooking(booking) {
+    await handleUpdateBookingStatus(
+      booking,
+      'cancelled',
+      booking.status === 'inquiry'
+        ? 'Permintaan telah dibatalkan.'
+        : 'Booking telah ditandakan sebagai dibatalkan.',
+    )
   }
 
   async function handleDeleteBooking(booking) {
@@ -590,7 +638,15 @@ function AdminBookingPage() {
         ) : (
           <div className="mt-8 grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
             <section className="space-y-8">
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <article className="rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-[0_20px_70px_rgba(80,58,35,0.08)]">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[#8b6b4a]">
+                    Pertanyaan
+                  </p>
+                  <p className="mt-4 text-4xl font-semibold text-[#2f221a]">
+                    {inquiryCount}
+                  </p>
+                </article>
                 <article className="rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-[0_20px_70px_rgba(80,58,35,0.08)]">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#8b6b4a]">
                     Disahkan
@@ -621,11 +677,17 @@ function AdminBookingPage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#8b6b4a]">
-                      Senarai Booking
+                      Permintaan & Booking
                     </p>
                     <h2 className="mt-4 text-3xl font-semibold text-[#2f221a]">
-                      Semua tempahan dan blok tarikh
+                      Semua permintaan dan rekod tarikh
                     </h2>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-[#665548]">
+                      Permintaan dari laman web akan masuk sebagai{' '}
+                      <span className="font-semibold text-[#2f221a]">Pertanyaan</span>.
+                      Sahkan untuk menutup tarikh pada kalendar pelanggan, atau
+                      batalkan jika tidak diteruskan.
+                    </p>
                   </div>
 
                   <button
@@ -663,104 +725,259 @@ function AdminBookingPage() {
                       Memuatkan senarai booking...
                     </p>
                   </div>
-                ) : bookings.length > 0 ? (
-                  <div className="mt-8 grid gap-4">
-                    {bookings.map((booking) => (
-                      <article
-                        key={booking.id}
-                        className="rounded-[2rem] border border-[#eadccf] bg-[#fcfaf7] p-5 shadow-[0_16px_40px_rgba(80,58,35,0.05)]"
-                      >
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-xl font-semibold text-[#2f221a]">
-                              {booking.guest_name || 'Tetamu tanpa nama'}
-                            </p>
-                            <p className="mt-2 text-sm leading-7 text-[#665548]">
-                              {formatMalayDate(booking.start_date)} hingga{' '}
-                              {formatMalayDate(booking.end_date)}
-                            </p>
-                          </div>
-
-                          <StatusBadge status={booking.status} />
-                        </div>
-
-                        <div className="mt-5 grid gap-3 text-sm leading-7 text-[#5f4d40] sm:grid-cols-2">
-                          <p>
-                            Telefon:{' '}
-                            <span className="font-semibold">
-                              {booking.guest_phone || '-'}
-                            </span>
-                          </p>
-                          <p>
-                            Email:{' '}
-                            <span className="font-semibold">
-                              {booking.guest_email || '-'}
-                            </span>
-                          </p>
-                          <p>
-                            Tetamu:{' '}
-                            <span className="font-semibold">
-                              {booking.guest_count} orang
-                            </span>
-                          </p>
-                          <p>
-                            Sumber:{' '}
-                            <span className="font-semibold">
-                              {sourceLabels[booking.source] ?? booking.source}
-                            </span>
-                          </p>
-                        </div>
-
-                        {booking.notes ? (
-                          <div className="mt-4 rounded-[1.25rem] bg-white px-4 py-3 text-sm leading-7 text-[#665548]">
-                            {booking.notes}
-                          </div>
-                        ) : null}
-
-                        <div className="mt-5 flex flex-wrap gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleEditBooking(booking)}
-                            className="inline-flex items-center gap-2 rounded-full border border-[#d8c8b4] bg-white px-4 py-2.5 text-sm font-semibold text-[#2f221a] transition hover:-translate-y-0.5 hover:border-[#c7b39b]"
-                          >
-                            <Pencil className="size-4" />
-                            Edit
-                          </button>
-
-                          {booking.status !== 'cancelled' ? (
-                            <button
-                              type="button"
-                              onClick={() => handleCancelBooking(booking)}
-                              className="inline-flex items-center gap-2 rounded-full border border-[#eadccf] bg-[#f8f2ea] px-4 py-2.5 text-sm font-semibold text-[#8b6b4a] transition hover:-translate-y-0.5 hover:border-[#d8c8b4]"
-                            >
-                              <XCircle className="size-4" />
-                              Tandakan Batal
-                            </button>
-                          ) : null}
-
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteBooking(booking)}
-                            className="inline-flex items-center gap-2 rounded-full border border-[#e7c3bc] bg-[#fff2ef] px-4 py-2.5 text-sm font-semibold text-[#9a4b3c] transition hover:-translate-y-0.5 hover:border-[#d3a9a0]"
-                          >
-                            <Trash2 className="size-4" />
-                            Padam
-                          </button>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
                 ) : (
-                  <div className="mt-8 rounded-[2rem] bg-[#f8f2ea] px-6 py-10 text-center">
-                    <CalendarDays className="mx-auto size-8 text-[#8b6b4a]" />
-                    <p className="mt-4 text-lg font-semibold text-[#2f221a]">
-                      Belum ada booking dalam sistem.
-                    </p>
-                    <p className="mt-3 text-sm leading-7 text-[#665548]">
-                      Gunakan borang di sebelah untuk tambah tempahan pertama
-                      atau blok tarikh tertentu.
-                    </p>
-                  </div>
+                  <>
+                    <div className="mt-8 rounded-[2rem] border border-[#eadccf] bg-[#f8f2ea] p-6">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#8b6b4a]">
+                            Permintaan Menunggu Tindakan
+                          </p>
+                          <h3 className="mt-3 text-2xl font-semibold text-[#2f221a]">
+                            Luluskan atau batalkan permintaan baru
+                          </h3>
+                        </div>
+                        <StatusBadge status="inquiry" />
+                      </div>
+
+                      {inquiryBookings.length > 0 ? (
+                        <div className="mt-6 grid gap-4">
+                          {inquiryBookings.map((booking) => (
+                            <article
+                              key={booking.id}
+                              className="rounded-[2rem] border border-[#eadccf] bg-white p-5 shadow-[0_16px_40px_rgba(80,58,35,0.05)]"
+                            >
+                              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-xl font-semibold text-[#2f221a]">
+                                    {booking.guest_name || 'Tetamu tanpa nama'}
+                                  </p>
+                                  <p className="mt-2 text-sm leading-7 text-[#665548]">
+                                    {formatMalayDate(booking.start_date)} hingga{' '}
+                                    {formatMalayDate(booking.end_date)}
+                                  </p>
+                                </div>
+
+                                <StatusBadge status={booking.status} />
+                              </div>
+
+                              <div className="mt-5 grid gap-3 text-sm leading-7 text-[#5f4d40] sm:grid-cols-2">
+                                <p>
+                                  Rujukan:{' '}
+                                  <span className="font-semibold">
+                                    {formatBookingReference(booking.id)}
+                                  </span>
+                                </p>
+                                <p>
+                                  Diterima:{' '}
+                                  <span className="font-semibold">
+                                    {formatMalayDateTime(booking.created_at)}
+                                  </span>
+                                </p>
+                                <p>
+                                  Telefon:{' '}
+                                  <span className="font-semibold">
+                                    {booking.guest_phone || '-'}
+                                  </span>
+                                </p>
+                                <p>
+                                  Email:{' '}
+                                  <span className="font-semibold">
+                                    {booking.guest_email || '-'}
+                                  </span>
+                                </p>
+                                <p>
+                                  Tetamu:{' '}
+                                  <span className="font-semibold">
+                                    {booking.guest_count} orang
+                                  </span>
+                                </p>
+                                <p>
+                                  Sumber:{' '}
+                                  <span className="font-semibold">
+                                    {sourceLabels[booking.source] ?? booking.source}
+                                  </span>
+                                </p>
+                              </div>
+
+                              {booking.notes ? (
+                                <div className="mt-4 rounded-[1.25rem] bg-[#fcfaf7] px-4 py-3 text-sm leading-7 text-[#665548]">
+                                  {booking.notes}
+                                </div>
+                              ) : null}
+
+                              <div className="mt-5 flex flex-wrap gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleConfirmBooking(booking)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-[#cfdccf] bg-[#eef7ef] px-4 py-2.5 text-sm font-semibold text-[#2e6a44] transition hover:-translate-y-0.5 hover:border-[#b5cdb8]"
+                                >
+                                  <ShieldCheck className="size-4" />
+                                  Sahkan Tempahan
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditBooking(booking)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-[#d8c8b4] bg-white px-4 py-2.5 text-sm font-semibold text-[#2f221a] transition hover:-translate-y-0.5 hover:border-[#c7b39b]"
+                                >
+                                  <Pencil className="size-4" />
+                                  Semak / Edit
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelBooking(booking)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-[#eadccf] bg-[#fff6ef] px-4 py-2.5 text-sm font-semibold text-[#8b6b4a] transition hover:-translate-y-0.5 hover:border-[#d8c8b4]"
+                                >
+                                  <XCircle className="size-4" />
+                                  Batal Permintaan
+                                </button>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-6 rounded-[1.5rem] bg-white px-5 py-6 text-sm leading-7 text-[#665548]">
+                          Tiada permintaan baru buat masa ini.
+                        </div>
+                      )}
+                    </div>
+
+                    {managedBookings.length > 0 ? (
+                      <div className="mt-8 grid gap-4">
+                        {managedBookings.map((booking) => (
+                          <article
+                            key={booking.id}
+                            className="rounded-[2rem] border border-[#eadccf] bg-[#fcfaf7] p-5 shadow-[0_16px_40px_rgba(80,58,35,0.05)]"
+                          >
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                              <div>
+                                <p className="text-xl font-semibold text-[#2f221a]">
+                                  {booking.guest_name || 'Tetamu tanpa nama'}
+                                </p>
+                                <p className="mt-2 text-sm leading-7 text-[#665548]">
+                                  {formatMalayDate(booking.start_date)} hingga{' '}
+                                  {formatMalayDate(booking.end_date)}
+                                </p>
+                              </div>
+
+                              <StatusBadge status={booking.status} />
+                            </div>
+
+                            <div className="mt-5 grid gap-3 text-sm leading-7 text-[#5f4d40] sm:grid-cols-2">
+                              <p>
+                                Rujukan:{' '}
+                                <span className="font-semibold">
+                                  {formatBookingReference(booking.id)}
+                                </span>
+                              </p>
+                              <p>
+                                Diterima:{' '}
+                                <span className="font-semibold">
+                                  {formatMalayDateTime(booking.created_at)}
+                                </span>
+                              </p>
+                              <p>
+                                Telefon:{' '}
+                                <span className="font-semibold">
+                                  {booking.guest_phone || '-'}
+                                </span>
+                              </p>
+                              <p>
+                                Email:{' '}
+                                <span className="font-semibold">
+                                  {booking.guest_email || '-'}
+                                </span>
+                              </p>
+                              <p>
+                                Tetamu:{' '}
+                                <span className="font-semibold">
+                                  {booking.guest_count} orang
+                                </span>
+                              </p>
+                              <p>
+                                Sumber:{' '}
+                                <span className="font-semibold">
+                                  {sourceLabels[booking.source] ?? booking.source}
+                                </span>
+                              </p>
+                            </div>
+
+                            {booking.notes ? (
+                              <div className="mt-4 rounded-[1.25rem] bg-white px-4 py-3 text-sm leading-7 text-[#665548]">
+                                {booking.notes}
+                              </div>
+                            ) : null}
+
+                            <div className="mt-5 flex flex-wrap gap-3">
+                              {booking.status !== 'confirmed' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleConfirmBooking(booking)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-[#cfdccf] bg-[#eef7ef] px-4 py-2.5 text-sm font-semibold text-[#2e6a44] transition hover:-translate-y-0.5 hover:border-[#b5cdb8]"
+                                >
+                                  <ShieldCheck className="size-4" />
+                                  Sahkan
+                                </button>
+                              ) : null}
+
+                              <button
+                                type="button"
+                                onClick={() => handleEditBooking(booking)}
+                                className="inline-flex items-center gap-2 rounded-full border border-[#d8c8b4] bg-white px-4 py-2.5 text-sm font-semibold text-[#2f221a] transition hover:-translate-y-0.5 hover:border-[#c7b39b]"
+                              >
+                                <Pencil className="size-4" />
+                                Edit
+                              </button>
+
+                              {booking.status !== 'cancelled' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelBooking(booking)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-[#eadccf] bg-[#f8f2ea] px-4 py-2.5 text-sm font-semibold text-[#8b6b4a] transition hover:-translate-y-0.5 hover:border-[#d8c8b4]"
+                                >
+                                  <XCircle className="size-4" />
+                                  Tandakan Batal
+                                </button>
+                              ) : null}
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteBooking(booking)}
+                                className="inline-flex items-center gap-2 rounded-full border border-[#e7c3bc] bg-[#fff2ef] px-4 py-2.5 text-sm font-semibold text-[#9a4b3c] transition hover:-translate-y-0.5 hover:border-[#d3a9a0]"
+                              >
+                                <Trash2 className="size-4" />
+                                Padam
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : bookings.length > 0 ? (
+                      <div className="mt-8 rounded-[2rem] bg-[#f8f2ea] px-6 py-10 text-center">
+                        <CalendarDays className="mx-auto size-8 text-[#8b6b4a]" />
+                        <p className="mt-4 text-lg font-semibold text-[#2f221a]">
+                          Semua rekod semasa masih dalam status pertanyaan.
+                        </p>
+                        <p className="mt-3 text-sm leading-7 text-[#665548]">
+                          Luluskan atau batalkan permintaan di bahagian atas
+                          untuk mula mengunci tarikh pada kalendar pelanggan.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-8 rounded-[2rem] bg-[#f8f2ea] px-6 py-10 text-center">
+                        <CalendarDays className="mx-auto size-8 text-[#8b6b4a]" />
+                        <p className="mt-4 text-lg font-semibold text-[#2f221a]">
+                          Belum ada booking dalam sistem.
+                        </p>
+                        <p className="mt-3 text-sm leading-7 text-[#665548]">
+                          Permintaan dari laman web akan muncul di sini, atau
+                          gunakan borang di sebelah untuk tambah tempahan pertama.
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </section>
