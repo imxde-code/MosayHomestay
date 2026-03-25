@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { addMonths, startOfToday } from 'date-fns'
-import { ms } from 'date-fns/locale'
 import {
   AlertCircle,
   ArrowRight,
@@ -12,17 +11,17 @@ import {
 } from 'lucide-react'
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/style.css'
-import { siteMeta } from '../data/siteData'
 import {
   buildWhatsAppBookingLink,
   formatBookingReference,
   formatDateKey,
-  formatMalayDate,
-  formatMalayShortDate,
+  formatDisplayDate,
+  formatDisplayShortDate,
   getBlockedStayRange,
   getDisabledDateRanges,
   getSelectedStay,
 } from '../lib/bookingCalendar'
+import { getDateFnsLocale } from '../lib/language'
 import { hasSupabaseConfig, supabase } from '../lib/supabaseClient'
 
 const today = startOfToday()
@@ -36,7 +35,7 @@ function getInitialInquiryForm() {
   }
 }
 
-function getFriendlyPublicRequestError(error) {
+function getFriendlyPublicRequestError(error, requestMessages) {
   const message = error?.message ?? ''
 
   if (
@@ -44,26 +43,26 @@ function getFriendlyPublicRequestError(error) {
     message.includes('bookings_no_overlapping_active_dates') ||
     message.includes('conflicting key value violates exclusion constraint')
   ) {
-    return 'Tarikh ini baru sahaja tidak tersedia. Sila pilih tarikh lain sebelum hantar permintaan baru.'
+    return requestMessages.unavailableDates
   }
 
   if (message.includes('Nama tetamu diperlukan')) {
-    return 'Sila isi nama tetamu untuk teruskan.'
+    return requestMessages.missingName
   }
 
   if (message.includes('Nombor telefon diperlukan')) {
-    return 'Sila isi nombor telefon untuk teruskan.'
+    return requestMessages.missingPhone
   }
 
   if (message.includes('Jumlah tetamu tidak sah')) {
-    return 'Jumlah tetamu yang dimasukkan tidak sah.'
+    return requestMessages.invalidGuests
   }
 
   if (message.includes('Tarikh masuk dan keluar tidak sah')) {
-    return 'Tarikh masuk dan keluar tidak sah. Sila semak semula pilihan anda.'
+    return requestMessages.invalidDates
   }
 
-  return message || 'Permintaan belum berjaya dihantar. Sila cuba lagi.'
+  return message || requestMessages.fallbackError
 }
 
 function AvailabilityPill({ label, tone = 'default' }) {
@@ -82,7 +81,7 @@ function AvailabilityPill({ label, tone = 'default' }) {
   )
 }
 
-function BookingCalendarSection() {
+function BookingCalendarSection({ language, siteMeta, copy }) {
   const [selectedRange, setSelectedRange] = useState()
   const [guests, setGuests] = useState('8')
   const [monthsToShow, setMonthsToShow] = useState(2)
@@ -95,6 +94,7 @@ function BookingCalendarSection() {
   const [requestError, setRequestError] = useState('')
   const [requestSuccess, setRequestSuccess] = useState('')
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false)
+  const dayPickerLocale = getDateFnsLocale(language)
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1024px)')
@@ -127,9 +127,7 @@ function BookingCalendarSection() {
       }
 
       if (error) {
-        setAvailabilityError(
-          'Kalendar ketersediaan belum dapat dimuatkan. Anda masih boleh teruskan pertanyaan melalui WhatsApp.',
-        )
+        setAvailabilityError(copy.loadError)
         setAvailabilityBlocks([])
       } else {
         setAvailabilityBlocks(data ?? [])
@@ -143,7 +141,7 @@ function BookingCalendarSection() {
     return () => {
       isCancelled = true
     }
-  }, [])
+  }, [copy.loadError])
 
   const disabledDays = [
     { before: today },
@@ -156,6 +154,7 @@ function BookingCalendarSection() {
         checkOut: selectedStay.checkOut,
         guests,
         nights: selectedStay.nights,
+        language,
       })
     : siteMeta.whatsappLink
   const visibleBlocks = availabilityBlocks.slice(0, 4)
@@ -183,24 +182,22 @@ function BookingCalendarSection() {
     event.preventDefault()
 
     if (!selectedStay) {
-      setRequestError('Sila pilih tarikh masuk dan tarikh keluar dahulu.')
+      setRequestError(copy.requestMessages.noDates)
       return
     }
 
     if (!supabase) {
-      setRequestError(
-        'Permintaan automatik belum diaktifkan. Sila teruskan melalui WhatsApp buat sementara waktu.',
-      )
+      setRequestError(copy.requestMessages.noAutomation)
       return
     }
 
     if (!inquiryForm.guestName.trim()) {
-      setRequestError('Sila isi nama tetamu untuk teruskan.')
+      setRequestError(copy.requestMessages.missingName)
       return
     }
 
     if (!inquiryForm.guestPhone.trim()) {
-      setRequestError('Sila isi nombor telefon untuk teruskan.')
+      setRequestError(copy.requestMessages.missingPhone)
       return
     }
 
@@ -219,7 +216,9 @@ function BookingCalendarSection() {
     })
 
     if (error) {
-      setRequestError(getFriendlyPublicRequestError(error))
+      setRequestError(
+        getFriendlyPublicRequestError(error, copy.requestMessages),
+      )
       setIsSubmittingRequest(false)
       return
     }
@@ -228,7 +227,7 @@ function BookingCalendarSection() {
     const requestReference = formatBookingReference(savedRequest?.id)
 
     setRequestSuccess(
-      `Permintaan anda telah direkodkan dengan rujukan ${requestReference}. WhatsApp akan dibuka sebentar lagi untuk pengesahan terus.`,
+      `${copy.requestMessages.successPrefix} ${requestReference}${copy.requestMessages.successSuffix}`,
     )
 
     const whatsappLink = buildWhatsAppBookingLink({
@@ -238,6 +237,7 @@ function BookingCalendarSection() {
       nights: selectedStay.nights,
       guestName: inquiryForm.guestName.trim(),
       requestReference,
+      language,
     })
 
     setInquiryForm(getInitialInquiryForm())
@@ -256,21 +256,19 @@ function BookingCalendarSection() {
         <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.1),_transparent_55%)] p-8 sm:p-10 lg:p-12">
             <p className="inline-flex items-center rounded-full border border-white/[0.12] bg-white/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-[#d7bea2]">
-              Kalendar Ketersediaan
+              {copy.eyebrow}
             </p>
             <h2 className="mt-6 text-balance font-display text-4xl leading-none text-[#f8f2ea] sm:text-5xl">
-              Semak tarikh tersedia secara lebih tepat dan teratur.
+              {copy.title}
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-8 text-[#dbc8b7] sm:text-lg">
-              Tarikh yang telah disahkan atau ditutup akan ditanda sebagai tidak
-              tersedia. Pilih tarikh masuk dan keluar, hantar permintaan
-              tempahan, kemudian teruskan ke WhatsApp untuk pengesahan akhir.
+              {copy.description}
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <AvailabilityPill label="Tarikh tersedia" tone="active" />
-              <AvailabilityPill label="Tarikh ditutup" tone="blocked" />
-              <AvailabilityPill label="Semakan semasa" />
+              <AvailabilityPill label={copy.pills.availableDates} tone="active" />
+              <AvailabilityPill label={copy.pills.blockedDates} tone="blocked" />
+              <AvailabilityPill label={copy.pills.liveCheck} />
             </div>
 
             <div className="mt-8 space-y-4 rounded-[2rem] border border-white/10 bg-white/5 p-6">
@@ -280,10 +278,9 @@ function BookingCalendarSection() {
                   strokeWidth={1.75}
                 />
                 <div>
-                  <p className="font-semibold">Tarikh dikunci secara automatik</p>
+                  <p className="font-semibold">{copy.featureList[0].title}</p>
                   <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                    Kalendar membaca blok tempahan daripada sistem supaya tarikh
-                    yang sudah ditempah tidak dipilih semula.
+                    {copy.featureList[0].description}
                   </p>
                 </div>
               </div>
@@ -294,11 +291,9 @@ function BookingCalendarSection() {
                   strokeWidth={1.75}
                 />
                 <div>
-                  <p className="font-semibold">Sesuai untuk urusan pentadbiran</p>
+                  <p className="font-semibold">{copy.featureList[1].title}</p>
                   <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                    Anda boleh urus tarikh yang diblok atau disahkan terus
-                    melalui panel pengurusan tanpa perlu ubah kod website setiap
-                    kali ada tempahan baru.
+                    {copy.featureList[1].description}
                   </p>
                 </div>
               </div>
@@ -306,11 +301,9 @@ function BookingCalendarSection() {
               <div className="flex items-start gap-4">
                 <Phone className="mt-1 size-5 text-[#e8ccb0]" strokeWidth={1.75} />
                 <div>
-                  <p className="font-semibold">Pengesahan akhir tetap mudah</p>
+                  <p className="font-semibold">{copy.featureList[2].title}</p>
                   <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                    Setiap permintaan akan direkodkan dahulu dalam sistem,
-                    kemudian tetamu disambungkan ke WhatsApp di{' '}
-                    {siteMeta.phoneDisplay} dengan mesej yang sudah siap diisi.
+                    {copy.featureList[2].description}
                   </p>
                 </div>
               </div>
@@ -331,28 +324,27 @@ function BookingCalendarSection() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="text-2xl font-semibold">
-                    Pilih tarikh penginapan anda
+                    {copy.panel.title}
                   </h3>
                   <p className="mt-3 text-sm leading-7 text-[#665548]">
-                    Pilih julat tarikh terus pada kalendar. Tarikh berwarna akan
-                    menandakan ketersediaan semasa.
+                    {copy.panel.description}
                   </p>
                 </div>
 
                 {isLoadingAvailability ? (
                   <span className="inline-flex items-center gap-2 rounded-full bg-[#f7efe5] px-4 py-2 text-sm font-medium text-[#6b5848]">
                     <LoaderCircle className="size-4 animate-spin" />
-                    Memuatkan ketersediaan
+                    {copy.panel.loadingAvailability}
                   </span>
                 ) : hasLiveAvailability ? (
                   <span className="inline-flex items-center gap-2 rounded-full bg-[#eef7ef] px-4 py-2 text-sm font-medium text-[#2e6a44]">
                     <ShieldCheck className="size-4" />
-                    Ketersediaan semasa
+                    {copy.panel.liveAvailability}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-2 rounded-full bg-[#f7efe5] px-4 py-2 text-sm font-medium text-[#6b5848]">
                     <AlertCircle className="size-4" />
-                    Mod manual sementara
+                    {copy.panel.manualMode}
                   </span>
                 )}
               </div>
@@ -360,7 +352,7 @@ function BookingCalendarSection() {
               <div className="booking-calendar mt-8 rounded-[2rem] bg-[#fcfaf7] p-4 sm:p-5">
                 <DayPicker
                   mode="range"
-                  locale={ms}
+                  locale={dayPickerLocale}
                   min={1}
                   numberOfMonths={monthsToShow}
                   selected={selectedRange}
@@ -375,14 +367,14 @@ function BookingCalendarSection() {
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <AvailabilityPill label="Hari tersedia" tone="active" />
-                <AvailabilityPill label="Hari tidak tersedia" tone="blocked" />
-                <AvailabilityPill label="Pilih sekurang-kurangnya 1 malam" />
+                <AvailabilityPill label={copy.pills.availableDays} tone="active" />
+                <AvailabilityPill label={copy.pills.blockedDays} tone="blocked" />
+                <AvailabilityPill label={copy.pills.minNight} />
               </div>
 
               <label className="mt-6 block">
                 <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                  Jumlah tetamu
+                  {copy.guestsLabel}
                 </span>
                 <select
                   value={guests}
@@ -391,7 +383,7 @@ function BookingCalendarSection() {
                 >
                   {[4, 6, 8, 10, 12].map((option) => (
                     <option key={option} value={String(option)}>
-                      {option} orang
+                      {option} {copy.guestsSuffix}
                     </option>
                   ))}
                 </select>
@@ -399,45 +391,46 @@ function BookingCalendarSection() {
 
               <div className="mt-7 rounded-[1.5rem] bg-[#f7efe5] p-5">
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                  Ringkasan permintaan
+                  {copy.requestSummaryTitle}
                 </p>
 
                 {selectedStay ? (
                   <div className="mt-4 grid gap-3 text-sm leading-7 text-[#4d3d33]">
                     <p>
-                      Tarikh masuk:{' '}
+                      {copy.summary.checkIn}:{' '}
                       <span className="font-semibold">
-                        {formatMalayDate(selectedStay.checkIn)}
+                        {formatDisplayDate(selectedStay.checkIn, language)}
                       </span>
                     </p>
                     <p>
-                      Tarikh keluar:{' '}
+                      {copy.summary.checkOut}:{' '}
                       <span className="font-semibold">
-                        {formatMalayDate(selectedStay.checkOut)}
+                        {formatDisplayDate(selectedStay.checkOut, language)}
                       </span>
                     </p>
                     <p>
-                      Jumlah malam:{' '}
+                      {copy.summary.nights}:{' '}
                       <span className="font-semibold">
-                        {selectedStay.nights} malam
+                        {selectedStay.nights} {copy.summary.nightsSuffix}
                       </span>
                     </p>
                     <p>
-                      Jumlah tetamu:{' '}
-                      <span className="font-semibold">{guests} orang</span>
+                      {copy.summary.guests}:{' '}
+                      <span className="font-semibold">
+                        {guests} {copy.guestsSuffix}
+                      </span>
                     </p>
                   </div>
                 ) : (
                   <p className="mt-4 text-sm leading-7 text-[#665548]">
-                    Pilih tarikh masuk dan tarikh keluar terus pada kalendar
-                    untuk melihat ringkasan tempahan anda.
+                    {copy.summary.empty}
                   </p>
                 )}
               </div>
 
               <div className="mt-6 rounded-[1.5rem] border border-[#eadccf] bg-[#fcfaf7] p-5">
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                  Tarikh tidak tersedia terdekat
+                  {copy.upcomingUnavailableTitle}
                 </p>
 
                 {visibleBlocksWithRanges.length > 0 ? (
@@ -449,22 +442,25 @@ function BookingCalendarSection() {
                       >
                         <div>
                           <p className="font-semibold text-[#2f221a]">
-                            {formatMalayShortDate(block.stayRange.from)} -{' '}
-                            {formatMalayShortDate(block.stayRange.to)}
+                            {formatDisplayShortDate(block.stayRange.from, language)} -{' '}
+                            {formatDisplayShortDate(block.stayRange.to, language)}
                           </p>
                           <p className="text-[#665548]">
-                            Blok tempahan yang sedang dikunci dalam sistem.
+                            {copy.unavailableBlockDescription}
                           </p>
                         </div>
-                        <AvailabilityPill label="Tidak tersedia" tone="blocked" />
+                        <AvailabilityPill
+                          label={copy.pills.unavailable}
+                          tone="blocked"
+                        />
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="mt-4 text-sm leading-7 text-[#665548]">
                     {hasLiveAvailability
-                      ? 'Tiada blok tarikh ditemui buat masa ini. Semua tarikh yang dipaparkan masih terbuka untuk pertanyaan baru.'
-                      : 'Tiada blok tarikh ditemui buat masa ini. Semua tarikh akan kelihatan terbuka sehingga anda sambungkan data tempahan sebenar.'}
+                      ? copy.noBlockedDatesLive
+                      : copy.noBlockedDatesManual}
                   </p>
                 )}
               </div>
@@ -473,7 +469,7 @@ function BookingCalendarSection() {
                 <div className="grid gap-5 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                      Nama tetamu
+                      {copy.form.guestNameLabel}
                     </span>
                     <input
                       type="text"
@@ -481,13 +477,13 @@ function BookingCalendarSection() {
                       value={inquiryForm.guestName}
                       onChange={handleInquiryFormChange}
                       className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                      placeholder="Contoh: Keluarga Ahmad"
+                      placeholder={copy.form.guestNamePlaceholder}
                     />
                   </label>
 
                   <label className="block">
                     <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                      Nombor telefon
+                      {copy.form.guestPhoneLabel}
                     </span>
                     <input
                       type="text"
@@ -495,14 +491,14 @@ function BookingCalendarSection() {
                       value={inquiryForm.guestPhone}
                       onChange={handleInquiryFormChange}
                       className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                      placeholder="Contoh: 019-268 3116"
+                      placeholder={copy.form.guestPhonePlaceholder}
                     />
                   </label>
                 </div>
 
                 <label className="block">
                   <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                    Email (pilihan)
+                    {copy.form.guestEmailLabel}
                   </span>
                   <input
                     type="email"
@@ -510,13 +506,13 @@ function BookingCalendarSection() {
                     value={inquiryForm.guestEmail}
                     onChange={handleInquiryFormChange}
                     className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                    placeholder="nama@email.com"
+                    placeholder={copy.form.guestEmailPlaceholder}
                   />
                 </label>
 
                 <label className="block">
                   <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                    Nota ringkas (pilihan)
+                    {copy.form.notesLabel}
                   </span>
                   <textarea
                     name="notes"
@@ -524,15 +520,16 @@ function BookingCalendarSection() {
                     onChange={handleInquiryFormChange}
                     rows="3"
                     className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                    placeholder="Contoh: check-in lewat malam atau keperluan tambahan"
+                    placeholder={copy.form.notesPlaceholder}
                   />
                 </label>
 
                 <div className="rounded-[1.5rem] border border-[#eadccf] bg-[#fcfaf7] p-5 text-sm leading-7 text-[#665548]">
-                  Permintaan anda akan masuk ke panel admin dahulu sebagai{' '}
-                  <span className="font-semibold text-[#2f221a]">Pertanyaan</span>.
-                  Tempahan hanya dianggap sah selepas pihak Mosay Homestay
-                  mengesahkannya.
+                  {copy.form.statusNotePrefix}
+                  <span className="font-semibold text-[#2f221a]">
+                    {copy.form.statusKeyword}
+                  </span>
+                  {copy.form.statusNoteSuffix}
                 </div>
 
                 {requestError ? (
@@ -563,11 +560,11 @@ function BookingCalendarSection() {
                       {isSubmittingRequest ? (
                         <>
                           <LoaderCircle className="size-4 animate-spin" />
-                          Menghantar Permintaan
+                          {copy.form.submittingLabel}
                         </>
                       ) : (
                         <>
-                          Hantar Permintaan & Terus ke WhatsApp
+                          {copy.form.submitLabel}
                           <MessageCircle className="size-4" />
                           <ArrowRight className="size-4" />
                         </>
@@ -579,7 +576,7 @@ function BookingCalendarSection() {
                       disabled
                       className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#d7c8bb] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#6f5f53]"
                     >
-                      Pilih Tarikh Dahulu
+                      {copy.form.selectDatesFirstLabel}
                       <CalendarDays className="size-4" />
                     </button>
                   )
@@ -590,7 +587,7 @@ function BookingCalendarSection() {
                     rel="noreferrer"
                     className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
                   >
-                    Teruskan Pertanyaan di WhatsApp
+                    {copy.form.continueWhatsappLabel}
                     <MessageCircle className="size-4" />
                     <ArrowRight className="size-4" />
                   </a>
@@ -600,7 +597,7 @@ function BookingCalendarSection() {
                     disabled
                     className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#d7c8bb] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#6f5f53]"
                   >
-                    Pilih Tarikh Dahulu
+                    {copy.form.selectDatesFirstLabel}
                     <CalendarDays className="size-4" />
                   </button>
                 )}
@@ -608,8 +605,7 @@ function BookingCalendarSection() {
 
               {!hasSupabaseConfig && import.meta.env.DEV ? (
                 <div className="mt-5 rounded-[1.5rem] border border-dashed border-[#d8c8b4] bg-white px-4 py-4 text-sm leading-7 text-[#665548]">
-                  Lengkapkan konfigurasi sambungan data untuk aktifkan
-                  ketersediaan semasa dan permintaan tempahan automatik.
+                  {copy.devHint}
                 </div>
               ) : null}
             </div>

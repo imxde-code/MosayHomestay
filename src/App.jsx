@@ -21,19 +21,19 @@ import {
   X,
 } from 'lucide-react'
 import {
-  amenities,
-  galleryDetails,
   galleryImages,
-  highlights,
-  houseFeatures,
-  navigationItems,
-  nearbyPlaces,
-  siteMeta,
+  getSiteData,
 } from './data/siteData'
 import BookingCalendarSection from './components/BookingCalendarSection'
 import LokasiKamiSection from './components/LokasiKamiSection'
+import {
+  defaultLanguage,
+  normalizeLanguage,
+  supportedLanguages,
+} from './lib/language'
 
 const AdminBookingPage = lazy(() => import('./components/AdminBookingPage'))
+const languageStorageKey = 'mosay-language'
 
 const amenityIcons = {
   wifi: Wifi,
@@ -81,6 +81,38 @@ function SectionHeading({ eyebrow, title, description, align = 'left' }) {
   )
 }
 
+function LanguageToggle({ language, onChange, label }) {
+  return (
+    <div className="inline-flex items-center gap-1 rounded-full border border-[#d8c8b4] bg-white/80 p-1 text-[#2f221a] shadow-[0_12px_28px_rgba(111,88,63,0.08)]">
+      <span className="hidden px-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8b6b4a] sm:block">
+        {label}
+      </span>
+      <div className="flex items-center gap-1">
+        {supportedLanguages.map((option) => {
+          const isActive = option.code === language
+
+          return (
+            <button
+              key={option.code}
+              type="button"
+              onClick={() => onChange(option.code)}
+              className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                isActive
+                  ? 'bg-[#2f221a] text-[#f8f2ea]'
+                  : 'text-[#6a584c] hover:bg-[#f4ecdf]'
+              }`}
+              aria-pressed={isActive}
+              title={option.name}
+            >
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function AmenityCard({ amenity }) {
   const Icon = amenityIcons[amenity.icon] ?? Home
 
@@ -95,11 +127,11 @@ function AmenityCard({ amenity }) {
   )
 }
 
-function GalleryCard({ image, isMissing, onError, onOpen }) {
-  const details = galleryDetails[image] ?? {
-    title: 'Gambar homestay',
-    description: 'Kemaskini butiran galeri untuk paparan yang lebih lengkap.',
-    tag: 'Galeri',
+function GalleryCard({ image, details, isMissing, onError, onOpen, fallbackCopy }) {
+  const cardDetails = details ?? {
+    title: fallbackCopy.title,
+    description: fallbackCopy.description,
+    tag: fallbackCopy.tag,
   }
   const imageSrc = resolveAssetPath(image)
 
@@ -113,24 +145,24 @@ function GalleryCard({ image, isMissing, onError, onOpen }) {
       {isMissing ? (
         <div className="flex aspect-[4/3] flex-col justify-between bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.85),_rgba(244,236,223,0.95))] p-6">
           <span className="inline-flex w-fit rounded-full bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4a]">
-            Tambah gambar
+            {fallbackCopy.actionLabel}
           </span>
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#8b6b4a]">
-              {details.tag}
+              {cardDetails.tag}
             </p>
-            <h3 className="text-2xl font-semibold text-[#2f221a]">{details.title}</h3>
+            <h3 className="text-2xl font-semibold text-[#2f221a]">{cardDetails.title}</h3>
             <p className="max-w-sm text-sm leading-7 text-[#6a584c]">
-              Galeri ini sedia untuk foto sebenar homestay anda supaya tetamu dapat melihat ruang dengan lebih jelas dan meyakinkan.
+              {fallbackCopy.lead}
             </p>
-            <p className="text-sm leading-7 text-[#6a584c]">{details.description}</p>
+            <p className="text-sm leading-7 text-[#6a584c]">{cardDetails.description}</p>
           </div>
         </div>
       ) : (
         <>
           <img
             src={imageSrc}
-            alt={details.title}
+            alt={cardDetails.title}
             loading="lazy"
             onError={() => onError(image)}
             className="aspect-[4/3] w-full object-cover transition duration-700 group-hover:scale-105"
@@ -138,10 +170,10 @@ function GalleryCard({ image, isMissing, onError, onOpen }) {
           <div className="absolute inset-0 bg-gradient-to-t from-[#2b211b] via-[#2b211b]/30 to-transparent opacity-90 transition duration-500 group-hover:opacity-100" />
           <div className="absolute inset-x-0 bottom-0 p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#f1dfc7]">
-              {details.tag}
+              {cardDetails.tag}
             </p>
-            <h3 className="mt-3 text-2xl font-semibold text-white">{details.title}</h3>
-            <p className="mt-3 max-w-sm text-sm leading-7 text-white/80">{details.description}</p>
+            <h3 className="mt-3 text-2xl font-semibold text-white">{cardDetails.title}</h3>
+            <p className="mt-3 max-w-sm text-sm leading-7 text-white/80">{cardDetails.description}</p>
           </div>
         </>
       )}
@@ -153,6 +185,21 @@ function App() {
   const [isAdminRoute, setIsAdminRoute] = useState(isAdminRouteHash)
   const [activeImage, setActiveImage] = useState(null)
   const [failedImages, setFailedImages] = useState({})
+  const [language, setLanguage] = useState(() => {
+    if (typeof window === 'undefined') {
+      return defaultLanguage
+    }
+
+    const storedLanguage = window.localStorage.getItem(languageStorageKey)
+
+    if (storedLanguage) {
+      return normalizeLanguage(storedLanguage)
+    }
+
+    return window.navigator.language?.toLowerCase().startsWith('en')
+      ? 'en'
+      : defaultLanguage
+  })
 
   useEffect(() => {
     const syncRoute = () => setIsAdminRoute(isAdminRouteHash())
@@ -184,7 +231,47 @@ function App() {
     }
   }, [activeImage])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem(languageStorageKey, language)
+    document.documentElement.lang = language
+  }, [language])
+
+  const {
+    amenities,
+    appContent,
+    galleryDetails,
+    highlights,
+    houseFeatures,
+    mapSection,
+    navigationItems,
+    nearbyPlaces,
+    bookingSection,
+    siteMeta,
+  } = getSiteData(language)
+
   const activeImageDetails = activeImage ? galleryDetails[activeImage] : null
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return
+    }
+
+    const titleTag = document.querySelector('title')
+
+    if (titleTag) {
+      titleTag.textContent = siteMeta.pageTitle
+    }
+
+    const descriptionTag = document.querySelector('meta[name="description"]')
+
+    if (descriptionTag) {
+      descriptionTag.setAttribute('content', siteMeta.pageDescription)
+    }
+  }, [siteMeta.pageDescription, siteMeta.pageTitle])
 
   function handleImageError(imagePath) {
     setFailedImages((current) => ({
@@ -200,10 +287,10 @@ function App() {
           <div className="min-h-screen bg-[linear-gradient(180deg,_#fbf6f0_0%,_#f7f0e8_38%,_#f5eee4_100%)] px-4 py-10 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl rounded-[2.5rem] border border-white/70 bg-white/90 p-8 text-center shadow-[0_24px_80px_rgba(80,58,35,0.08)] sm:p-10">
               <p className="inline-flex items-center gap-3 rounded-full border border-[#d8c8b4] bg-[#f8f2ea] px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#8b6b4a]">
-                Memuatkan panel admin
+                {appContent.loadingAdmin.title}
               </p>
               <p className="mt-5 text-sm leading-7 text-[#665548]">
-                Sila tunggu sebentar sementara panel pengurusan dibuka.
+                {appContent.loadingAdmin.description}
               </p>
             </div>
           </div>
@@ -248,15 +335,22 @@ function App() {
             ))}
           </div>
 
-          <a
-            href={siteMeta.whatsappLink}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-[#2f221a] px-5 py-3 text-sm font-semibold text-[#f8f2ea] shadow-[0_18px_40px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
-          >
-            Tempah Sekarang
-            <ArrowRight className="size-4" />
-          </a>
+          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+            <LanguageToggle
+              language={language}
+              onChange={setLanguage}
+              label={appContent.languageSwitcherLabel}
+            />
+            <a
+              href={siteMeta.whatsappLink}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-[#2f221a] px-5 py-3 text-sm font-semibold text-[#f8f2ea] shadow-[0_18px_40px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
+            >
+              {appContent.hero.primaryCta}
+              <ArrowRight className="size-4" />
+            </a>
+          </div>
         </nav>
       </header>
 
@@ -265,13 +359,13 @@ function App() {
           <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
             <div className="animate-fade-up">
               <p className="inline-flex items-center rounded-full border border-[#d8c8b4] bg-white/85 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-[#8b6b4a] shadow-[0_12px_28px_rgba(111,88,63,0.08)]">
-                Homestay keluarga di Shah Alam
+                {appContent.hero.eyebrow}
               </p>
               <h1 className="text-balance mt-6 max-w-3xl font-display text-5xl leading-none text-[#2f221a] sm:text-6xl lg:text-7xl">
-                Selesa untuk keluarga, strategik untuk setiap urusan anda.
+                {appContent.hero.title}
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-[#665548] sm:text-xl">
-                Mosay Homestay menawarkan rumah teres 2 tingkat yang luas, lengkap dan mesra keluarga. Sesuai untuk penginapan berkumpulan, urusan kampus, acara di Shah Alam atau percutian singkat yang lebih tenang.
+                {appContent.hero.description}
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -279,28 +373,27 @@ function App() {
                   href="#tempahan"
                   className="inline-flex items-center justify-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
                 >
-                  Tempah Sekarang
+                  {appContent.hero.primaryCta}
                   <ArrowRight className="size-4" />
                 </a>
                 <a
                   href="#galeri"
                   className="inline-flex items-center justify-center gap-3 rounded-full border border-[#d8c8b4] bg-white/75 px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#2f221a] shadow-[0_12px_35px_rgba(80,58,35,0.08)] transition hover:-translate-y-0.5 hover:border-[#c7b39b]"
                 >
-                  Lihat Galeri
+                  {appContent.hero.secondaryCta}
                   <ChevronRight className="size-4" />
                 </a>
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3 text-sm text-[#5d4b3f]">
-                <span className="rounded-full border border-white/80 bg-white/70 px-4 py-2">
-                  4 bilik + 1 bilik tambahan
-                </span>
-                <span className="rounded-full border border-white/80 bg-white/70 px-4 py-2">
-                  Penghawa dingin semua bilik utama
-                </span>
-                <span className="rounded-full border border-white/80 bg-white/70 px-4 py-2">
-                  Berhampiran UiTM, IDCC & hospital
-                </span>
+                {appContent.hero.badges.map((badge) => (
+                  <span
+                    key={badge}
+                    className="rounded-full border border-white/80 bg-white/70 px-4 py-2"
+                  >
+                    {badge}
+                  </span>
+                ))}
               </div>
 
               <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -321,10 +414,10 @@ function App() {
                 <div className="flex items-start justify-between gap-6">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#d7bea2]">
-                      Ruang yang dibuat untuk keluarga
+                      {appContent.featurePanel.eyebrow}
                     </p>
                     <h2 className="mt-4 font-display text-4xl leading-none">
-                      Rehat dengan lebih tenang dan praktikal.
+                      {appContent.featurePanel.title}
                     </h2>
                   </div>
                   <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-white/10 text-[#f5dfc3]">
@@ -335,16 +428,20 @@ function App() {
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-5">
                     <BedDouble className="size-5 text-[#e8ccb0]" strokeWidth={1.75} />
-                    <p className="mt-4 text-lg font-semibold">Katil queen setiap bilik utama</p>
+                    <p className="mt-4 text-lg font-semibold">
+                      {appContent.featurePanel.cards[0].title}
+                    </p>
                     <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                      Sesuai untuk keluarga yang perlukan tidur lebih selesa tanpa rasa sempit.
+                      {appContent.featurePanel.cards[0].description}
                     </p>
                   </div>
                   <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-5">
                     <Bath className="size-5 text-[#e8ccb0]" strokeWidth={1.75} />
-                    <p className="mt-4 text-lg font-semibold">Pemanas air setiap bilik air</p>
+                    <p className="mt-4 text-lg font-semibold">
+                      {appContent.featurePanel.cards[1].title}
+                    </p>
                     <p className="mt-2 text-sm leading-7 text-[#dbc8b7]">
-                      Lebih selesa untuk orang dewasa, warga emas dan anak kecil.
+                      {appContent.featurePanel.cards[1].description}
                     </p>
                   </div>
                 </div>
@@ -352,7 +449,7 @@ function App() {
                 <div className="mt-6 flex items-center justify-between rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-5">
                   <div>
                     <p className="text-sm uppercase tracking-[0.2em] text-[#d7bea2]">
-                      Hubungi terus
+                      {appContent.featurePanel.contactLabel}
                     </p>
                     <p className="mt-3 text-2xl font-semibold">{siteMeta.phoneDisplay}</p>
                   </div>
@@ -362,7 +459,7 @@ function App() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 rounded-full bg-[#f8f2ea] px-5 py-3 text-sm font-semibold text-[#2f221a] transition hover:-translate-y-0.5"
                   >
-                    WhatsApp
+                    {appContent.featurePanel.whatsappLabel}
                     <MessageCircle className="size-4" />
                   </a>
                 </div>
@@ -371,16 +468,20 @@ function App() {
               <div className="grid gap-5 sm:grid-cols-2">
                 <article className="animate-float rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_rgba(80,58,35,0.08)]">
                   <MapPin className="size-6 text-[#8b6b4a]" strokeWidth={1.75} />
-                  <p className="mt-5 text-lg font-semibold text-[#2f221a]">Lokasi strategik</p>
+                  <p className="mt-5 text-lg font-semibold text-[#2f221a]">
+                    {appContent.quickCards[0].title}
+                  </p>
                   <p className="mt-3 text-sm leading-7 text-[#665548]">
-                    Mudah bergerak ke UiTM Shah Alam, Hospital Shah Alam, IDCC, Jakel dan Masjid Negeri.
+                    {appContent.quickCards[0].description}
                   </p>
                 </article>
                 <article className="animate-float-delay rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_rgba(80,58,35,0.08)]">
                   <Wind className="size-6 text-[#8b6b4a]" strokeWidth={1.75} />
-                  <p className="mt-5 text-lg font-semibold text-[#2f221a]">Penginapan lebih selesa</p>
+                  <p className="mt-5 text-lg font-semibold text-[#2f221a]">
+                    {appContent.quickCards[1].title}
+                  </p>
                   <p className="mt-3 text-sm leading-7 text-[#665548]">
-                    Penghawa dingin pada semua bilik utama serta ruang yang sesuai untuk keluarga besar dan kumpulan.
+                    {appContent.quickCards[1].description}
                   </p>
                 </article>
               </div>
@@ -392,9 +493,9 @@ function App() {
           <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14">
             <div className="rounded-[2.5rem] border border-white/70 bg-white/85 p-8 shadow-[0_24px_80px_rgba(80,58,35,0.08)] sm:p-10">
               <SectionHeading
-                eyebrow="Tentang Homestay"
-                title="Penginapan yang terasa seperti rumah sendiri."
-                description="Di Mosay Homestay, kami percaya pengalaman menginap yang baik bermula dengan rasa tenang, ruang yang cukup dan lokasi yang memudahkan urusan harian. Sebab itu setiap ruang dirancang untuk keluarga dan kumpulan yang mahu berehat dengan selesa tanpa mengorbankan akses ke tempat penting di Shah Alam."
+                eyebrow={appContent.sections.about.eyebrow}
+                title={appContent.sections.about.title}
+                description={appContent.sections.about.description}
               />
             </div>
 
@@ -416,9 +517,9 @@ function App() {
 
         <section id="kemudahan" className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
           <SectionHeading
-            eyebrow="Kemudahan"
-            title="Lengkap untuk penginapan yang santai, kemas dan praktikal."
-            description="Daripada hiburan seisi keluarga hinggalah keperluan memasak dan mencuci, kemudahan di Mosay Homestay disusun untuk memudahkan penginapan anda dari hari pertama hingga hari terakhir."
+            eyebrow={appContent.sections.amenities.eyebrow}
+            title={appContent.sections.amenities.title}
+            description={appContent.sections.amenities.description}
             align="center"
           />
 
@@ -431,13 +532,13 @@ function App() {
 
         <section id="galeri" className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
           <SectionHeading
-            eyebrow="Galeri"
-            title="Lihat suasana homestay yang selesa, lapang dan mesra keluarga."
-            description="Klik mana-mana gambar untuk melihat paparan yang lebih besar dan dapatkan gambaran lebih jelas tentang ruang penginapan anda."
+            eyebrow={appContent.sections.gallery.eyebrow}
+            title={appContent.sections.gallery.title}
+            description={appContent.sections.gallery.description}
           />
 
           <div className="mt-6 rounded-[1.75rem] border border-dashed border-[#d8c8b4] bg-white/65 px-5 py-4 text-sm leading-7 text-[#665548] shadow-[0_18px_50px_rgba(80,58,35,0.05)]">
-            Sentuh atau klik gambar untuk membuka paparan yang lebih besar.
+            {appContent.sections.gallery.hint}
           </div>
 
           <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -445,9 +546,11 @@ function App() {
               <GalleryCard
                 key={image}
                 image={image}
+                details={galleryDetails[image]}
                 isMissing={Boolean(failedImages[image])}
                 onError={handleImageError}
                 onOpen={setActiveImage}
+                fallbackCopy={appContent.sections.gallery.fallback}
               />
             ))}
           </div>
@@ -456,9 +559,9 @@ function App() {
         <section id="lokasi" className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
           <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
             <SectionHeading
-              eyebrow="Lokasi Strategik"
-              title="Mudah untuk urusan kampus, keluarga, acara dan rawatan."
-              description="Kedudukan Mosay Homestay memudahkan pergerakan anda ke lokasi penting sekitar Shah Alam. Sesuai untuk tetamu yang datang bersama keluarga, kumpulan kecil atau rombongan."
+              eyebrow={appContent.sections.location.eyebrow}
+              title={appContent.sections.location.title}
+              description={appContent.sections.location.description}
             />
 
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -476,27 +579,33 @@ function App() {
           </div>
         </section>
 
-        <LokasiKamiSection />
+        <LokasiKamiSection siteMeta={siteMeta} copy={mapSection} />
 
-        <BookingCalendarSection />
+        <BookingCalendarSection
+          language={language}
+          siteMeta={siteMeta}
+          copy={bookingSection}
+        />
 
         <section className="mx-auto max-w-7xl px-4 py-18 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-[2.5rem] border border-white/70 bg-white/85 p-8 shadow-[0_24px_80px_rgba(80,58,35,0.09)] sm:p-10 lg:p-12">
             <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#8b6b4a]">
-                  Tempah dengan lebih mudah
+                  {appContent.sections.cta.eyebrow}
                 </p>
                 <h2 className="mt-5 text-balance font-display text-4xl leading-none text-[#2f221a] sm:text-5xl">
-                  Klik WhatsApp untuk tempahan sekarang.
+                  {appContent.sections.cta.title}
                 </h2>
                 <p className="mt-5 max-w-2xl text-base leading-8 text-[#665548] sm:text-lg">
-                  Jika anda mencari homestay yang selesa untuk keluarga atau kumpulan di Shah Alam, Mosay Homestay sedia membantu. Hubungi kami terus untuk semak ketersediaan tarikh dan dapatkan respon dengan lebih pantas.
+                  {appContent.sections.cta.description}
                 </p>
               </div>
 
               <div className="rounded-[2rem] bg-[#f8f2ea] p-6 shadow-[0_20px_70px_rgba(80,58,35,0.08)] sm:p-8">
-                <p className="text-sm uppercase tracking-[0.2em] text-[#8b6b4a]">Alamat</p>
+                <p className="text-sm uppercase tracking-[0.2em] text-[#8b6b4a]">
+                  {appContent.sections.cta.addressLabel}
+                </p>
                 <p className="mt-4 text-lg font-semibold leading-8 text-[#2f221a]">
                   {siteMeta.addressLines[0]}
                   <br />
@@ -508,7 +617,7 @@ function App() {
                   rel="noreferrer"
                   className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#2f221a] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
                 >
-                  WhatsApp Sekarang
+                  {appContent.sections.cta.whatsappCta}
                   <ArrowRight className="size-4" />
                 </a>
               </div>
@@ -546,7 +655,7 @@ function App() {
               className="inline-flex items-center gap-3 text-[#665548] transition hover:text-[#2f221a]"
             >
               <MessageCircle className="size-4" strokeWidth={1.75} />
-              Tempahan melalui WhatsApp
+              {appContent.sections.footer.whatsappLabel}
             </a>
           </div>
         </div>
@@ -554,13 +663,13 @@ function App() {
         <div className="border-t border-[#e7dacb] px-4 py-5 sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-6">
             <p className="signature-shadow text-xs font-semibold uppercase tracking-[0.32em] text-[#8b6b4a]">
-              Dibina oleh imxde-code
+              {appContent.sections.footer.builtByLabel}
             </p>
             <a
               href={`${import.meta.env.BASE_URL}#/admin`}
               className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8b6b4a] transition hover:text-[#2f221a]"
             >
-              Akses Admin
+              {appContent.sections.footer.adminAccessLabel}
             </a>
           </div>
         </div>
@@ -570,11 +679,13 @@ function App() {
         href={siteMeta.whatsappLink}
         target="_blank"
         rel="noreferrer"
-        aria-label="Hubungi Mosay Homestay melalui WhatsApp"
+        aria-label={appContent.sections.footer.floatingWhatsAppAria}
         className="fixed bottom-5 right-5 z-50 inline-flex items-center gap-3 rounded-full bg-[#1f7a4c] px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_45px_rgba(31,122,76,0.3)] transition hover:-translate-y-1 hover:bg-[#228653]"
       >
         <MessageCircle className="size-5" />
-        <span className="hidden sm:inline">WhatsApp Kami</span>
+        <span className="hidden sm:inline">
+          {appContent.sections.footer.floatingWhatsAppLabel}
+        </span>
       </a>
 
       {activeImage && activeImageDetails ? (
@@ -595,7 +706,7 @@ function App() {
                     type="button"
                     onClick={() => setActiveImage(null)}
                     className="ml-auto inline-flex size-12 items-center justify-center rounded-full border border-white/15 bg-white/10 transition hover:bg-white/[0.16]"
-                    aria-label="Tutup galeri"
+                    aria-label={appContent.sections.footer.modalCloseAria}
                   >
                     <X className="size-5" />
                   </button>
@@ -617,7 +728,7 @@ function App() {
                   rel="noreferrer"
                   className="mt-8 inline-flex items-center justify-center gap-3 rounded-full bg-[#f8f2ea] px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#2f221a] transition hover:-translate-y-0.5"
                 >
-                  Tempah Melalui WhatsApp
+                  {appContent.sections.footer.modalCta}
                   <ArrowRight className="size-4" />
                 </a>
               </aside>

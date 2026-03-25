@@ -5,7 +5,7 @@ import {
   parseISO,
   startOfDay,
 } from 'date-fns'
-import { ms } from 'date-fns/locale'
+import { getDateFnsLocale, normalizeLanguage } from './language'
 
 export function normalizeDate(value) {
   if (!value) {
@@ -26,15 +26,31 @@ export function formatDateKey(value) {
 }
 
 export function formatMalayDate(value) {
-  const date = normalizeDate(value)
-
-  return date ? format(date, 'd MMMM yyyy', { locale: ms }) : '-'
+  return formatDisplayDate(value, 'ms')
 }
 
 export function formatMalayShortDate(value) {
+  return formatDisplayShortDate(value, 'ms')
+}
+
+export function formatDisplayDate(value, language = 'ms') {
   const date = normalizeDate(value)
 
-  return date ? format(date, 'd MMM', { locale: ms }) : '-'
+  return date
+    ? format(date, 'd MMMM yyyy', {
+        locale: getDateFnsLocale(language),
+      })
+    : '-'
+}
+
+export function formatDisplayShortDate(value, language = 'ms') {
+  const date = normalizeDate(value)
+
+  return date
+    ? format(date, 'd MMM', {
+        locale: getDateFnsLocale(language),
+      })
+    : '-'
 }
 
 export function formatBookingReference(value) {
@@ -106,17 +122,36 @@ export function buildWhatsAppBookingLink({
   nights,
   guestName,
   requestReference,
+  language = 'ms',
 }) {
+  const resolvedLanguage = normalizeLanguage(language)
+  const isEnglish = resolvedLanguage === 'en'
   const message = [
     guestName
-      ? `Salam Mosay Homestay, saya ${guestName} dan saya berminat untuk semak ketersediaan tarikh.`
-      : 'Salam Mosay Homestay, saya berminat untuk semak ketersediaan tarikh.',
-    requestReference ? `Rujukan permintaan: ${requestReference}` : null,
-    `Tarikh masuk: ${formatMalayDate(checkIn)}`,
-    `Tarikh keluar: ${formatMalayDate(checkOut)}`,
-    `Jumlah malam: ${nights} malam`,
-    `Jumlah tetamu: ${guests} orang`,
-    'Mohon sahkan sama ada tarikh ini masih tersedia. Terima kasih.',
+      ? isEnglish
+        ? `Hello Mosay Homestay, my name is ${guestName} and I would like to check date availability.`
+        : `Salam Mosay Homestay, saya ${guestName} dan saya berminat untuk semak ketersediaan tarikh.`
+      : isEnglish
+        ? 'Hello Mosay Homestay, I would like to check date availability.'
+        : 'Salam Mosay Homestay, saya berminat untuk semak ketersediaan tarikh.',
+    requestReference
+      ? isEnglish
+        ? `Request reference: ${requestReference}`
+        : `Rujukan permintaan: ${requestReference}`
+      : null,
+    isEnglish
+      ? `Check-in date: ${formatDisplayDate(checkIn, resolvedLanguage)}`
+      : `Tarikh masuk: ${formatDisplayDate(checkIn, resolvedLanguage)}`,
+    isEnglish
+      ? `Check-out date: ${formatDisplayDate(checkOut, resolvedLanguage)}`
+      : `Tarikh keluar: ${formatDisplayDate(checkOut, resolvedLanguage)}`,
+    isEnglish ? `Number of nights: ${nights} nights` : `Jumlah malam: ${nights} malam`,
+    isEnglish
+      ? `Number of guests: ${guests} guests`
+      : `Jumlah tetamu: ${guests} orang`,
+    isEnglish
+      ? 'Please confirm whether these dates are still available. Thank you.'
+      : 'Mohon sahkan sama ada tarikh ini masih tersedia. Terima kasih.',
   ]
     .filter(Boolean)
     .join('\n')
