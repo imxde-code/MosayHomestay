@@ -160,6 +160,27 @@ function LanguageToggle({ language, onChange, label }) {
   )
 }
 
+function BrandLogo({ href, siteMeta, variant = 'header' }) {
+  const sizeClass =
+    variant === 'header'
+      ? 'h-11 w-auto sm:h-12 lg:h-14'
+      : 'h-14 w-auto sm:h-16'
+
+  return (
+    <a
+      href={href}
+      aria-label={siteMeta.name}
+      className={`inline-flex items-center ${variant === 'header' ? 'shrink-0' : ''}`}
+    >
+      <img
+        src={resolveAssetPath(siteMeta.logoPath)}
+        alt={`${siteMeta.name} logo`}
+        className={`${sizeClass} h-auto drop-shadow-[0_14px_34px_rgba(47,34,26,0.08)]`}
+      />
+    </a>
+  )
+}
+
 function AmenityCard({ amenity }) {
   const Icon = amenityIcons[amenity.icon] ?? Home
 
@@ -390,20 +411,8 @@ function App() {
       <div className="pointer-events-none absolute left-[-10rem] top-[48rem] -z-10 size-[22rem] rounded-full bg-[#f6e9d9]/70 blur-3xl" />
 
       <header className="sticky top-0 z-40 border-b border-white/60 bg-[#f9f4ed]/80 backdrop-blur-xl">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <a href="#utama" className="flex items-center gap-3">
-            <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-[#2f221a] text-lg font-semibold text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.22)]">
-              M
-            </span>
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#8b6b4a]">
-                {siteMeta.familyName}
-              </p>
-              <p className="font-display text-2xl leading-none text-[#2f221a]">
-                {siteMeta.name}
-              </p>
-            </div>
-          </a>
+        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <BrandLogo href="#utama" siteMeta={siteMeta} />
 
           <div className="hidden items-center gap-7 lg:flex">
             {navigationItems.map((item) => (
@@ -711,10 +720,7 @@ function App() {
       <footer id="hubungi" className="border-t border-white/60 bg-[#f6efe6]">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#8b6b4a]">
-              {siteMeta.familyName}
-            </p>
-            <p className="mt-3 font-display text-3xl text-[#2f221a]">{siteMeta.name}</p>
+            <BrandLogo href="#utama" siteMeta={siteMeta} variant="footer" />
             <p className="mt-4 text-sm leading-7 text-[#665548]">
               {siteMeta.addressLines[0]}
               <br />

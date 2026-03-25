@@ -9,6 +9,7 @@ const sharedSiteMeta = {
   familyName: 'Mosay Family',
   siteUrl: 'https://mosayhomestay.com',
   ogImageUrl: 'https://mosayhomestay.com/images/ruang-tamu.jpeg',
+  logoPath: '/images/mosay-logo-trimmed.png',
   phoneDisplay: '019-268 3116',
   phoneHref: 'tel:+60192683116',
   addressLines: [
