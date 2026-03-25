@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Phone,
   ShieldCheck,
+  X,
 } from 'lucide-react'
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/style.css'
@@ -85,6 +86,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
   const [selectedRange, setSelectedRange] = useState()
   const [guests, setGuests] = useState('8')
   const [monthsToShow, setMonthsToShow] = useState(2)
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [inquiryForm, setInquiryForm] = useState(getInitialInquiryForm)
   const [availabilityBlocks, setAvailabilityBlocks] = useState([])
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(
@@ -97,7 +99,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
   const dayPickerLocale = getDateFnsLocale(language)
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const mediaQuery = window.matchMedia('(min-width: 960px)')
     const syncMonths = () => setMonthsToShow(mediaQuery.matches ? 2 : 1)
 
     syncMonths()
@@ -105,6 +107,27 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
 
     return () => mediaQuery.removeEventListener('change', syncMonths)
   }, [])
+
+  useEffect(() => {
+    if (!isCalendarOpen) {
+      return undefined
+    }
+
+    const previousOverflow = document.body.style.overflow
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsCalendarOpen(false)
+      }
+    }
+
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isCalendarOpen])
 
   useEffect(() => {
     if (!supabase) {
@@ -165,6 +188,18 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
     }))
     .filter((block) => block.stayRange)
   const hasLiveAvailability = hasSupabaseConfig && !availabilityError
+
+  function handleCalendarRangeSelect(nextRange) {
+    setSelectedRange(nextRange)
+    setRequestError('')
+    setRequestSuccess('')
+  }
+
+  function clearSelectedDates() {
+    setSelectedRange(undefined)
+    setRequestError('')
+    setRequestSuccess('')
+  }
 
   function handleInquiryFormChange(event) {
     const { name, value } = event.target
@@ -349,21 +384,86 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                 )}
               </div>
 
-              <div className="booking-calendar mt-8 rounded-[2rem] bg-[#fcfaf7] p-4 sm:p-5">
-                <DayPicker
-                  mode="range"
-                  locale={dayPickerLocale}
-                  min={1}
-                  numberOfMonths={monthsToShow}
-                  selected={selectedRange}
-                  onSelect={setSelectedRange}
-                  disabled={disabledDays}
-                  excludeDisabled
-                  fixedWeeks
-                  showOutsideDays
-                  startMonth={today}
-                  endMonth={addMonths(today, 18)}
-                />
+              <div className="mt-8 rounded-[2rem] border border-[#eadccf] bg-[linear-gradient(135deg,#fdf8f1_0%,#f7efe5_100%)] p-5 shadow-[0_18px_50px_rgba(80,58,35,0.08)] sm:p-6">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
+                  <button
+                    type="button"
+                    onClick={() => setIsCalendarOpen(true)}
+                    className={`rounded-[1.5rem] border px-5 py-4 text-left transition hover:-translate-y-0.5 ${
+                      selectedRange?.from
+                        ? 'border-[#d5c1a8] bg-white text-[#2f221a] shadow-[0_14px_34px_rgba(80,58,35,0.08)]'
+                        : 'border-[#eadccf] bg-white/80 text-[#5d4b3f]'
+                    }`}
+                  >
+                    <span className="block text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[#8b6b4a]">
+                      {copy.dateBar.checkInLabel}
+                    </span>
+                    <span className="mt-2 block text-lg font-semibold sm:text-[1.35rem]">
+                      {selectedRange?.from
+                        ? formatDisplayDate(selectedRange.from, language)
+                        : copy.dateBar.checkInPlaceholder}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCalendarOpen(true)}
+                    className={`rounded-[1.5rem] border px-5 py-4 text-left transition hover:-translate-y-0.5 ${
+                      selectedRange?.to
+                        ? 'border-[#d5c1a8] bg-white text-[#2f221a] shadow-[0_14px_34px_rgba(80,58,35,0.08)]'
+                        : 'border-[#eadccf] bg-white/80 text-[#5d4b3f]'
+                    }`}
+                  >
+                    <span className="block text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[#8b6b4a]">
+                      {copy.dateBar.checkOutLabel}
+                    </span>
+                    <span className="mt-2 block text-lg font-semibold sm:text-[1.35rem]">
+                      {selectedRange?.to
+                        ? formatDisplayDate(selectedRange.to, language)
+                        : copy.dateBar.checkOutPlaceholder}
+                    </span>
+                  </button>
+
+                  <div className="rounded-[1.5rem] border border-[#eadccf] bg-white/80 px-5 py-4 text-[#2f221a]">
+                    <span className="block text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[#8b6b4a]">
+                      {copy.dateBar.stayLabel}
+                    </span>
+                    <span className="mt-2 block text-lg font-semibold sm:text-[1.35rem]">
+                      {selectedStay
+                        ? `${selectedStay.nights} ${copy.summary.nightsSuffix}`
+                        : copy.dateBar.stayEmpty}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="max-w-2xl text-sm leading-7 text-[#665548]">
+                    {copy.dateBar.helper}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {selectedRange?.from ? (
+                      <button
+                        type="button"
+                        onClick={clearSelectedDates}
+                        className="inline-flex items-center rounded-full border border-[#dcc8b6] bg-white px-4 py-2 text-sm font-semibold text-[#7a624b] transition hover:border-[#c9b096] hover:text-[#5f4b39]"
+                      >
+                        {copy.dateBar.clearDatesLabel}
+                      </button>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => setIsCalendarOpen(true)}
+                      className="inline-flex items-center justify-center gap-3 rounded-full bg-[#2f221a] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
+                    >
+                      {selectedStay
+                        ? copy.dateBar.changeDatesLabel
+                        : copy.dateBar.openCalendarLabel}
+                      <CalendarDays className="size-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -372,60 +472,62 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                 <AvailabilityPill label={copy.pills.minNight} />
               </div>
 
-              <label className="mt-6 block">
-                <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                  {copy.guestsLabel}
-                </span>
-                <select
-                  value={guests}
-                  onChange={(event) => setGuests(event.target.value)}
-                  className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
-                >
-                  {[4, 6, 8, 10, 12].map((option) => (
-                    <option key={option} value={String(option)}>
-                      {option} {copy.guestsSuffix}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="mt-7 grid gap-4 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+                <label className="block rounded-[1.5rem] border border-[#eadccf] bg-[#fcfaf7] p-5">
+                  <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                    {copy.guestsLabel}
+                  </span>
+                  <select
+                    value={guests}
+                    onChange={(event) => setGuests(event.target.value)}
+                    className="w-full rounded-2xl border border-[#eadccf] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                  >
+                    {[4, 6, 8, 10, 12].map((option) => (
+                      <option key={option} value={String(option)}>
+                        {option} {copy.guestsSuffix}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <div className="mt-7 rounded-[1.5rem] bg-[#f7efe5] p-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
-                  {copy.requestSummaryTitle}
-                </p>
-
-                {selectedStay ? (
-                  <div className="mt-4 grid gap-3 text-sm leading-7 text-[#4d3d33]">
-                    <p>
-                      {copy.summary.checkIn}:{' '}
-                      <span className="font-semibold">
-                        {formatDisplayDate(selectedStay.checkIn, language)}
-                      </span>
-                    </p>
-                    <p>
-                      {copy.summary.checkOut}:{' '}
-                      <span className="font-semibold">
-                        {formatDisplayDate(selectedStay.checkOut, language)}
-                      </span>
-                    </p>
-                    <p>
-                      {copy.summary.nights}:{' '}
-                      <span className="font-semibold">
-                        {selectedStay.nights} {copy.summary.nightsSuffix}
-                      </span>
-                    </p>
-                    <p>
-                      {copy.summary.guests}:{' '}
-                      <span className="font-semibold">
-                        {guests} {copy.guestsSuffix}
-                      </span>
-                    </p>
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm leading-7 text-[#665548]">
-                    {copy.summary.empty}
+                <div className="rounded-[1.5rem] bg-[#f7efe5] p-5">
+                  <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                    {copy.requestSummaryTitle}
                   </p>
-                )}
+
+                  {selectedStay ? (
+                    <div className="mt-4 grid gap-3 text-sm leading-7 text-[#4d3d33] sm:grid-cols-2">
+                      <p>
+                        {copy.summary.checkIn}:{' '}
+                        <span className="font-semibold">
+                          {formatDisplayDate(selectedStay.checkIn, language)}
+                        </span>
+                      </p>
+                      <p>
+                        {copy.summary.checkOut}:{' '}
+                        <span className="font-semibold">
+                          {formatDisplayDate(selectedStay.checkOut, language)}
+                        </span>
+                      </p>
+                      <p>
+                        {copy.summary.nights}:{' '}
+                        <span className="font-semibold">
+                          {selectedStay.nights} {copy.summary.nightsSuffix}
+                        </span>
+                      </p>
+                      <p>
+                        {copy.summary.guests}:{' '}
+                        <span className="font-semibold">
+                          {guests} {copy.guestsSuffix}
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm leading-7 text-[#665548]">
+                      {copy.summary.empty}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="mt-6 rounded-[1.5rem] border border-[#eadccf] bg-[#fcfaf7] p-5">
@@ -612,6 +714,127 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
           </div>
         </div>
       </div>
+
+      {isCalendarOpen ? (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-[#1d140e]/55 p-4 backdrop-blur-[6px]"
+          onClick={() => setIsCalendarOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={copy.modal.title}
+            className="mx-auto my-4 w-full max-w-4xl rounded-[2rem] border border-[#e4d6c8] bg-[#fcfaf7] p-5 text-[#2f221a] shadow-[0_32px_120px_rgba(29,20,14,0.28)] sm:my-8 sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex flex-col gap-4 border-b border-[#eadccf] pb-5 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8b6b4a]">
+                  {copy.modal.eyebrow}
+                </p>
+                <h4 className="mt-3 text-2xl font-semibold sm:text-[2rem]">
+                  {copy.modal.title}
+                </h4>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-[#665548] sm:text-base">
+                  {copy.modal.description}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsCalendarOpen(false)}
+                className="inline-flex items-center justify-center rounded-full border border-[#eadccf] bg-white p-3 text-[#7a624b] transition hover:border-[#d6c2b0] hover:text-[#2f221a]"
+                aria-label={copy.modal.closeLabel}
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="booking-calendar mt-6 rounded-[2rem] border border-[#eadccf] bg-white p-4 shadow-[0_20px_60px_rgba(80,58,35,0.08)] sm:p-5">
+              <DayPicker
+                mode="range"
+                locale={dayPickerLocale}
+                min={1}
+                numberOfMonths={monthsToShow}
+                selected={selectedRange}
+                onSelect={handleCalendarRangeSelect}
+                disabled={disabledDays}
+                excludeDisabled
+                fixedWeeks
+                showOutsideDays
+                startMonth={today}
+                endMonth={addMonths(today, 18)}
+              />
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <AvailabilityPill label={copy.pills.availableDays} tone="active" />
+              <AvailabilityPill label={copy.pills.blockedDays} tone="blocked" />
+              <AvailabilityPill label={copy.pills.minNight} />
+            </div>
+
+            <div className="mt-6 flex flex-col gap-4 rounded-[1.5rem] bg-[#f7efe5] p-5 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                  {copy.requestSummaryTitle}
+                </p>
+                {selectedStay ? (
+                  <div className="mt-3 grid gap-2 text-sm leading-7 text-[#4d3d33] sm:grid-cols-2">
+                    <p>
+                      {copy.summary.checkIn}:{' '}
+                      <span className="font-semibold">
+                        {formatDisplayDate(selectedStay.checkIn, language)}
+                      </span>
+                    </p>
+                    <p>
+                      {copy.summary.checkOut}:{' '}
+                      <span className="font-semibold">
+                        {formatDisplayDate(selectedStay.checkOut, language)}
+                      </span>
+                    </p>
+                    <p>
+                      {copy.summary.nights}:{' '}
+                      <span className="font-semibold">
+                        {selectedStay.nights} {copy.summary.nightsSuffix}
+                      </span>
+                    </p>
+                    <p>
+                      {copy.summary.guests}:{' '}
+                      <span className="font-semibold">
+                        {guests} {copy.guestsSuffix}
+                      </span>
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm leading-7 text-[#665548]">
+                    {copy.summary.empty}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {selectedRange?.from ? (
+                  <button
+                    type="button"
+                    onClick={clearSelectedDates}
+                    className="inline-flex items-center rounded-full border border-[#dcc8b6] bg-white px-4 py-2 text-sm font-semibold text-[#7a624b] transition hover:border-[#c9b096] hover:text-[#5f4b39]"
+                  >
+                    {copy.dateBar.clearDatesLabel}
+                  </button>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => setIsCalendarOpen(false)}
+                  className="inline-flex items-center justify-center rounded-full bg-[#2f221a] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
+                >
+                  {copy.modal.doneLabel}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }
