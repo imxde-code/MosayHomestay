@@ -49,7 +49,7 @@ Jika secret belum disambungkan, laman masih boleh dibuka tetapi seksyen kalendar
 Contoh URL:
 
 ```text
-https://imxde-code.github.io/MosayHomestay/#/admin
+https://mosayhomestay.com/#/admin
 ```
 
 ## Contoh Data Tempahan

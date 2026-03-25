@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirecting...</title>
+    <script>
+      (function redirectToApp() {
+        var target =
+          window.location.pathname +
+          window.location.search +
+          window.location.hash
+
+        window.location.replace('/?p=' + encodeURIComponent(target))
+      })()
+    </script>
+  </head>
+  <body></body>
+</html>

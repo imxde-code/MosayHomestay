@@ -52,12 +52,59 @@ function resolveAssetPath(assetPath) {
   return `${import.meta.env.BASE_URL}${assetPath.replace(/^\/+/, '')}`
 }
 
+function normalizePathname(pathname = '/') {
+  const trimmedPath = pathname.replace(/\/+$/, '')
+
+  if (!trimmedPath) {
+    return '/'
+  }
+
+  return trimmedPath.toLowerCase()
+}
+
+function getSectionIdFromHash(hash) {
+  if (!hash || hash === '#' || hash.startsWith('#/')) {
+    return ''
+  }
+
+  return decodeURIComponent(hash.slice(1))
+}
+
 function isAdminRouteHash() {
   if (typeof window === 'undefined') {
     return false
   }
 
-  return window.location.hash.startsWith('#/admin')
+  return (
+    window.location.hash.startsWith('#/admin') ||
+    normalizePathname(window.location.pathname) === '/admin'
+  )
+}
+
+function upsertMetaTag(attributeName, attributeValue, content) {
+  let tag = document.head.querySelector(
+    `meta[${attributeName}="${attributeValue}"]`,
+  )
+
+  if (!tag) {
+    tag = document.createElement('meta')
+    tag.setAttribute(attributeName, attributeValue)
+    document.head.append(tag)
+  }
+
+  tag.setAttribute('content', content)
+}
+
+function upsertLinkTag(rel, href) {
+  let tag = document.head.querySelector(`link[rel="${rel}"]`)
+
+  if (!tag) {
+    tag = document.createElement('link')
+    tag.setAttribute('rel', rel)
+    document.head.append(tag)
+  }
+
+  tag.setAttribute('href', href)
 }
 
 function SectionHeading({ eyebrow, title, description, align = 'left' }) {
@@ -202,7 +249,24 @@ function App() {
   })
 
   useEffect(() => {
-    const syncRoute = () => setIsAdminRoute(isAdminRouteHash())
+    const syncRoute = () => {
+      const isAdmin = isAdminRouteHash()
+      setIsAdminRoute(isAdmin)
+
+      if (isAdmin) {
+        return
+      }
+
+      const sectionId = getSectionIdFromHash(window.location.hash)
+
+      if (!sectionId) {
+        return
+      }
+
+      window.requestAnimationFrame(() => {
+        document.getElementById(sectionId)?.scrollIntoView({ block: 'start' })
+      })
+    }
 
     syncRoute()
     window.addEventListener('hashchange', syncRoute)
@@ -271,7 +335,25 @@ function App() {
     if (descriptionTag) {
       descriptionTag.setAttribute('content', siteMeta.pageDescription)
     }
-  }, [siteMeta.pageDescription, siteMeta.pageTitle])
+
+    upsertLinkTag('canonical', siteMeta.siteUrl)
+    upsertMetaTag('property', 'og:type', 'website')
+    upsertMetaTag('property', 'og:site_name', siteMeta.name)
+    upsertMetaTag('property', 'og:url', siteMeta.siteUrl)
+    upsertMetaTag('property', 'og:title', siteMeta.pageTitle)
+    upsertMetaTag('property', 'og:description', siteMeta.pageDescription)
+    upsertMetaTag('property', 'og:image', siteMeta.ogImageUrl)
+    upsertMetaTag('name', 'twitter:card', 'summary_large_image')
+    upsertMetaTag('name', 'twitter:title', siteMeta.pageTitle)
+    upsertMetaTag('name', 'twitter:description', siteMeta.pageDescription)
+    upsertMetaTag('name', 'twitter:image', siteMeta.ogImageUrl)
+  }, [
+    siteMeta.name,
+    siteMeta.ogImageUrl,
+    siteMeta.pageDescription,
+    siteMeta.pageTitle,
+    siteMeta.siteUrl,
+  ])
 
   function handleImageError(imagePath) {
     setFailedImages((current) => ({
@@ -626,7 +708,7 @@ function App() {
         </section>
       </main>
 
-      <footer className="border-t border-white/60 bg-[#f6efe6]">
+      <footer id="hubungi" className="border-t border-white/60 bg-[#f6efe6]">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#8b6b4a]">
@@ -666,7 +748,7 @@ function App() {
               {appContent.sections.footer.builtByLabel}
             </p>
             <a
-              href={`${import.meta.env.BASE_URL}#/admin`}
+              href="#/admin"
               className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8b6b4a] transition hover:text-[#2f221a]"
             >
               {appContent.sections.footer.adminAccessLabel}

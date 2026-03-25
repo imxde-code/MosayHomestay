@@ -7,6 +7,8 @@ function buildWhatsAppLink(message) {
 const sharedSiteMeta = {
   name: 'Mosay Homestay',
   familyName: 'Mosay Family',
+  siteUrl: 'https://mosayhomestay.com',
+  ogImageUrl: 'https://mosayhomestay.com/images/ruang-tamu.jpeg',
   phoneDisplay: '019-268 3116',
   phoneHref: 'tel:+60192683116',
   addressLines: [
