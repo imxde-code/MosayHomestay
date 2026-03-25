@@ -136,19 +136,21 @@ function SectionHeading({ eyebrow, title, description, align = 'left' }) {
 function BrandLogo({ href, siteMeta, variant = 'header' }) {
   const sizeClass =
     variant === 'header'
-      ? 'h-11 w-auto sm:h-12 lg:h-14'
-      : 'h-14 w-auto sm:h-16'
+      ? 'h-9 sm:h-10 lg:h-12'
+      : 'h-12 sm:h-14'
 
   return (
     <a
       href={href}
       aria-label={siteMeta.name}
-      className={`inline-flex items-center ${variant === 'header' ? 'shrink-0' : ''}`}
+      className={`inline-flex min-w-0 items-center ${variant === 'header' ? 'shrink-0 max-w-[8.5rem] sm:max-w-none' : 'max-w-full'}`}
     >
       <img
         src={resolveAssetPath(siteMeta.logoPath)}
-        alt={`${siteMeta.name} logo`}
-        className={`${sizeClass} h-auto drop-shadow-[0_14px_34px_rgba(47,34,26,0.08)]`}
+        alt=""
+        decoding="async"
+        loading={variant === 'header' ? 'eager' : 'lazy'}
+        className={`${sizeClass} w-auto max-w-full object-contain drop-shadow-[0_14px_34px_rgba(47,34,26,0.08)]`}
       />
     </a>
   )
