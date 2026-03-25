@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { addMonths, startOfToday } from 'date-fns'
 import {
   AlertCircle,
@@ -18,6 +18,7 @@ import {
   formatDateKey,
   formatDisplayDate,
   formatDisplayShortDate,
+  findConflictingAvailabilityBlock,
   getBlockedStayRange,
   getDisabledDateRanges,
   getSelectedStay,
@@ -26,6 +27,7 @@ import { getDateFnsLocale } from '../lib/language'
 import { hasSupabaseConfig, supabase } from '../lib/supabaseClient'
 
 const today = startOfToday()
+const AVAILABILITY_REFRESH_INTERVAL_MS = 30000
 
 function getInitialInquiryForm() {
   return {
@@ -34,6 +36,22 @@ function getInitialInquiryForm() {
     guestEmail: '',
     notes: '',
   }
+}
+
+function isValidGuestPhone(value) {
+  const trimmedValue = value.trim()
+
+  if (!trimmedValue) {
+    return false
+  }
+
+  if (!/^[+\d()\-\s]+$/.test(trimmedValue)) {
+    return false
+  }
+
+  const digitsOnly = trimmedValue.replace(/\D/g, '')
+
+  return digitsOnly.length >= 8 && digitsOnly.length <= 15
 }
 
 function getFriendlyPublicRequestError(error, requestMessages) {
@@ -97,7 +115,27 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
   const [requestSuccess, setRequestSuccess] = useState('')
   const [submittedRequest, setSubmittedRequest] = useState(null)
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false)
+  const isMountedRef = useRef(false)
+  const availabilityRequestIdRef = useRef(0)
+  const availabilityBlocksRef = useRef([])
+  const selectedRangeRef = useRef()
   const dayPickerLocale = getDateFnsLocale(language)
+
+  useEffect(() => {
+    isMountedRef.current = true
+
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    availabilityBlocksRef.current = availabilityBlocks
+  }, [availabilityBlocks])
+
+  useEffect(() => {
+    selectedRangeRef.current = selectedRange
+  }, [selectedRange])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 960px)')
@@ -130,42 +168,89 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
     }
   }, [isCalendarOpen])
 
-  useEffect(() => {
-    if (!supabase) {
-      return undefined
-    }
+  const refreshAvailability = useCallback(
+    async ({ background = false } = {}) => {
+      if (!supabase) {
+        return
+      }
 
-    let isCancelled = false
+      const requestId = availabilityRequestIdRef.current + 1
+      availabilityRequestIdRef.current = requestId
 
-    async function loadAvailability() {
-      setIsLoadingAvailability(true)
-      setAvailabilityError('')
+      if (!background || availabilityBlocksRef.current.length === 0) {
+        setIsLoadingAvailability(true)
+      }
 
       const { data, error } = await supabase.rpc('get_public_booking_blocks', {
         start_from: formatDateKey(today),
         end_before: formatDateKey(addMonths(today, 18)),
       })
 
-      if (isCancelled) {
+      if (
+        !isMountedRef.current ||
+        requestId !== availabilityRequestIdRef.current
+      ) {
         return
       }
 
       if (error) {
         setAvailabilityError(copy.loadError)
-        setAvailabilityBlocks([])
-      } else {
-        setAvailabilityBlocks(data ?? [])
+
+        if (availabilityBlocksRef.current.length === 0) {
+          setAvailabilityBlocks([])
+        }
+
+        setIsLoadingAvailability(false)
+        return
       }
 
+      const nextBlocks = data ?? []
+
+      setAvailabilityError('')
+      setAvailabilityBlocks(nextBlocks)
       setIsLoadingAvailability(false)
+
+      if (
+        findConflictingAvailabilityBlock(nextBlocks, selectedRangeRef.current)
+      ) {
+        setSelectedRange(undefined)
+        setRequestSuccess('')
+        setSubmittedRequest(null)
+        setRequestError(copy.requestMessages.selectionExpired)
+      }
+    },
+    [copy.loadError, copy.requestMessages.selectionExpired],
+  )
+
+  useEffect(() => {
+    if (!supabase) {
+      return undefined
     }
 
-    loadAvailability()
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refreshAvailability({ background: true })
+      }
+    }
+
+    const initialRefreshId = window.setTimeout(() => {
+      refreshAvailability()
+    }, 0)
+    const intervalId = window.setInterval(
+      refreshIfVisible,
+      AVAILABILITY_REFRESH_INTERVAL_MS,
+    )
+
+    window.addEventListener('focus', refreshIfVisible)
+    document.addEventListener('visibilitychange', refreshIfVisible)
 
     return () => {
-      isCancelled = true
+      window.clearTimeout(initialRefreshId)
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', refreshIfVisible)
+      document.removeEventListener('visibilitychange', refreshIfVisible)
     }
-  }, [copy.loadError])
+  }, [refreshAvailability])
 
   const disabledDays = [
     { before: today },
@@ -189,6 +274,16 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
     }))
     .filter((block) => block.stayRange)
   const hasLiveAvailability = hasSupabaseConfig && !availabilityError
+
+  function handleOpenCalendar() {
+    setIsCalendarOpen(true)
+
+    if (supabase) {
+      refreshAvailability({
+        background: availabilityBlocks.length > 0,
+      })
+    }
+  }
 
   function handleCalendarRangeSelect(nextRange) {
     setSelectedRange(nextRange)
@@ -253,6 +348,17 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
       return
     }
 
+    if (!isValidGuestPhone(inquiryForm.guestPhone)) {
+      setRequestError(copy.requestMessages.invalidPhone)
+      return
+    }
+
+    if (findConflictingAvailabilityBlock(availabilityBlocks, selectedRange)) {
+      setSelectedRange(undefined)
+      setRequestError(copy.requestMessages.selectionExpired)
+      return
+    }
+
     setIsSubmittingRequest(true)
     setRequestError('')
     setRequestSuccess('')
@@ -268,9 +374,19 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
     })
 
     if (error) {
-      setRequestError(
-        getFriendlyPublicRequestError(error, copy.requestMessages),
+      const friendlyError = getFriendlyPublicRequestError(
+        error,
+        copy.requestMessages,
       )
+
+      if (friendlyError === copy.requestMessages.unavailableDates) {
+        setSelectedRange(undefined)
+        setRequestError(copy.requestMessages.unavailableDates)
+        refreshAvailability({ background: true })
+      } else {
+        setRequestError(friendlyError)
+      }
+
       setIsSubmittingRequest(false)
       return
     }
@@ -411,7 +527,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
                   <button
                     type="button"
-                    onClick={() => setIsCalendarOpen(true)}
+                    onClick={handleOpenCalendar}
                     className={`rounded-[1.5rem] border px-5 py-4 text-left transition hover:-translate-y-0.5 ${
                       selectedRange?.from
                         ? 'border-[#d5c1a8] bg-white text-[#2f221a] shadow-[0_14px_34px_rgba(80,58,35,0.08)]'
@@ -430,7 +546,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
 
                   <button
                     type="button"
-                    onClick={() => setIsCalendarOpen(true)}
+                    onClick={handleOpenCalendar}
                     className={`rounded-[1.5rem] border px-5 py-4 text-left transition hover:-translate-y-0.5 ${
                       selectedRange?.to
                         ? 'border-[#d5c1a8] bg-white text-[#2f221a] shadow-[0_14px_34px_rgba(80,58,35,0.08)]'
@@ -477,7 +593,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
 
                     <button
                       type="button"
-                      onClick={() => setIsCalendarOpen(true)}
+                      onClick={handleOpenCalendar}
                       className="inline-flex items-center justify-center gap-3 rounded-full bg-[#2f221a] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#f8f2ea] shadow-[0_18px_45px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
                     >
                       {selectedStay
@@ -691,6 +807,8 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                         name="guestName"
                         value={inquiryForm.guestName}
                         onChange={handleInquiryFormChange}
+                        autoComplete="name"
+                        enterKeyHint="next"
                         className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
                         placeholder={copy.form.guestNamePlaceholder}
                       />
@@ -701,10 +819,15 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                         {copy.form.guestPhoneLabel}
                       </span>
                       <input
-                        type="text"
+                        type="tel"
                         name="guestPhone"
                         value={inquiryForm.guestPhone}
                         onChange={handleInquiryFormChange}
+                        inputMode="tel"
+                        autoComplete="tel"
+                        enterKeyHint="next"
+                        pattern="[+0-9()\\-\\s]*"
+                        maxLength={24}
                         className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
                         placeholder={copy.form.guestPhonePlaceholder}
                       />
@@ -720,6 +843,10 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                       name="guestEmail"
                       value={inquiryForm.guestEmail}
                       onChange={handleInquiryFormChange}
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      enterKeyHint="next"
                       className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
                       placeholder={copy.form.guestEmailPlaceholder}
                     />
@@ -733,6 +860,8 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                       name="notes"
                       value={inquiryForm.notes}
                       onChange={handleInquiryFormChange}
+                      autoComplete="off"
+                      enterKeyHint="done"
                       rows="3"
                       className="w-full rounded-2xl border border-[#eadccf] bg-[#fcfaf7] px-4 py-3.5 text-base outline-none transition placeholder:text-[#a28d7b] focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
                       placeholder={copy.form.notesPlaceholder}

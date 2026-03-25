@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Droplets,
   Home,
+  Menu,
   MapPin,
   MessageCircle,
   Phone,
@@ -252,6 +253,7 @@ function GalleryCard({ image, details, isMissing, onError, onOpen, fallbackCopy 
 function App() {
   const [isAdminRoute, setIsAdminRoute] = useState(isAdminRouteHash)
   const [activeImage, setActiveImage] = useState(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [failedImages, setFailedImages] = useState({})
   const [language, setLanguage] = useState(() => {
     if (typeof window === 'undefined') {
@@ -324,6 +326,35 @@ function App() {
     window.localStorage.setItem(languageStorageKey, language)
     document.documentElement.lang = language
   }, [language])
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      return undefined
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isMobileMenuOpen])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const closeOnDesktop = (event) => {
+      if (event.matches) {
+        setIsMobileMenuOpen(false)
+      }
+    }
+
+    mediaQuery.addEventListener('change', closeOnDesktop)
+
+    return () => mediaQuery.removeEventListener('change', closeOnDesktop)
+  }, [])
 
   const {
     amenities,
@@ -426,7 +457,7 @@ function App() {
             ))}
           </div>
 
-          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <div className="hidden items-center gap-2 lg:flex">
             <LanguageToggle
               language={language}
               onChange={setLanguage}
@@ -442,7 +473,85 @@ function App() {
               <ArrowRight className="size-4" />
             </a>
           </div>
+
+          <div className="flex items-center gap-2 lg:hidden">
+            <LanguageToggle
+              language={language}
+              onChange={setLanguage}
+              label={appContent.languageSwitcherLabel}
+            />
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((current) => !current)}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation-menu"
+              aria-label={
+                isMobileMenuOpen
+                  ? appContent.mobileMenu.closeLabel
+                  : appContent.mobileMenu.openLabel
+              }
+              className="inline-flex items-center gap-2 rounded-full border border-[#d8c8b4] bg-white/80 px-4 py-3 text-sm font-semibold text-[#2f221a] shadow-[0_12px_28px_rgba(111,88,63,0.08)] transition hover:border-[#c7b39b]"
+            >
+              {isMobileMenuOpen ? (
+                <X className="size-4" />
+              ) : (
+                <Menu className="size-4" />
+              )}
+              <span className="hidden sm:inline">
+                {isMobileMenuOpen
+                  ? appContent.mobileMenu.closeLabel
+                  : appContent.mobileMenu.openLabel}
+              </span>
+            </button>
+          </div>
         </nav>
+
+        {isMobileMenuOpen ? (
+          <div
+            id="mobile-navigation-menu"
+            className="border-t border-white/60 px-4 pb-4 sm:px-6 lg:hidden"
+          >
+            <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/70 bg-white/92 p-5 shadow-[0_24px_80px_rgba(80,58,35,0.08)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8b6b4a]">
+                {appContent.mobileMenu.title}
+              </p>
+
+              <div className="mt-4 grid gap-2">
+                {navigationItems.map((item) => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="rounded-[1.25rem] border border-[#eadccf] bg-[#fcfaf7] px-4 py-3 text-sm font-medium text-[#2f221a] transition hover:border-[#d8c8b4] hover:bg-white"
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3">
+                <a
+                  href={siteMeta.whatsappLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="inline-flex items-center justify-center gap-3 rounded-full bg-[#2f221a] px-5 py-3.5 text-sm font-semibold text-[#f8f2ea] shadow-[0_18px_40px_rgba(47,34,26,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a2b22]"
+                >
+                  {appContent.hero.primaryCta}
+                  <ArrowRight className="size-4" />
+                </a>
+                <a
+                  href={siteMeta.phoneHref}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="inline-flex items-center justify-center gap-3 rounded-full border border-[#d8c8b4] bg-[#f8f2ea] px-5 py-3.5 text-sm font-semibold text-[#2f221a] transition hover:-translate-y-0.5 hover:border-[#c7b39b]"
+                >
+                  <Phone className="size-4" />
+                  {siteMeta.phoneDisplay}
+                </a>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </header>
 
       <main>

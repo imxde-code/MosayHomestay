@@ -208,6 +208,11 @@ const localizedSiteData = {
     ],
     appContent: {
       languageSwitcherLabel: 'Bahasa',
+      mobileMenu: {
+        title: 'Navigasi',
+        openLabel: 'Buka menu',
+        closeLabel: 'Tutup menu',
+      },
       hero: {
         eyebrow: 'Homestay keluarga di Shah Alam',
         title: 'Selesa untuk keluarga, strategik untuk setiap urusan anda.',
@@ -424,8 +429,12 @@ const localizedSiteData = {
           'Permintaan automatik belum diaktifkan. Sila teruskan melalui WhatsApp buat sementara waktu.',
         missingName: 'Sila isi nama tetamu untuk teruskan.',
         missingPhone: 'Sila isi nombor telefon untuk teruskan.',
+        invalidPhone:
+          'Sila masukkan nombor telefon yang sah supaya kami boleh hubungi anda semula.',
         unavailableDates:
           'Tarikh ini baru sahaja tidak tersedia. Sila pilih tarikh lain sebelum hantar permintaan baru.',
+        selectionExpired:
+          'Pilihan tarikh anda baru sahaja tidak tersedia dan telah dikosongkan. Sila pilih julat tarikh lain.',
         invalidGuests: 'Jumlah tetamu yang dimasukkan tidak sah.',
         invalidDates:
           'Tarikh masuk dan keluar tidak sah. Sila semak semula pilihan anda.',
@@ -625,6 +634,11 @@ const localizedSiteData = {
     ],
     appContent: {
       languageSwitcherLabel: 'Language',
+      mobileMenu: {
+        title: 'Navigation',
+        openLabel: 'Open menu',
+        closeLabel: 'Close menu',
+      },
       hero: {
         eyebrow: 'Family homestay in Shah Alam',
         title: 'Comfort for families, convenience for every trip.',
@@ -840,8 +854,12 @@ const localizedSiteData = {
           'Automatic request submission is not active yet. Please continue through WhatsApp for now.',
         missingName: 'Please enter the guest name to continue.',
         missingPhone: 'Please enter the phone number to continue.',
+        invalidPhone:
+          'Please enter a valid phone number so we can contact you again.',
         unavailableDates:
           'These dates just became unavailable. Please choose a different date range before sending a new request.',
+        selectionExpired:
+          'Your selected dates just became unavailable and were cleared. Please choose a different date range.',
         invalidGuests: 'The guest count is not valid.',
         invalidDates:
           'The selected check-in and check-out dates are not valid. Please review your selection.',

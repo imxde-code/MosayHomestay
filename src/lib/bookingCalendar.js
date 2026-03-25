@@ -74,6 +74,36 @@ export function getDisabledDateRanges(blocks) {
     .map(({ from, to }) => ({ from, to }))
 }
 
+export function findConflictingAvailabilityBlock(blocks, selection) {
+  const partialCheckIn = normalizeDate(
+    selection?.from ?? selection?.checkIn ?? null,
+  )
+  const partialCheckOut = normalizeDate(
+    selection?.to ?? selection?.checkOut ?? null,
+  )
+
+  return (
+    blocks.find((block) => {
+      const blockedCheckIn = normalizeDate(block?.start_date)
+      const blockedCheckOut = normalizeDate(block?.end_date)
+
+      if (!blockedCheckIn || !blockedCheckOut || !partialCheckIn) {
+        return false
+      }
+
+      if (!partialCheckOut) {
+        return (
+          partialCheckIn >= blockedCheckIn && partialCheckIn < blockedCheckOut
+        )
+      }
+
+      return (
+        partialCheckIn < blockedCheckOut && partialCheckOut > blockedCheckIn
+      )
+    }) ?? null
+  )
+}
+
 export function getBlockedStayRange(block) {
   const from = normalizeDate(block?.start_date)
   const checkoutDate = normalizeDate(block?.end_date)
