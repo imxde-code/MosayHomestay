@@ -1,3 +1,4 @@
+import { MAX_GUESTS } from '../lib/bookingGuests'
 import { normalizeLanguage } from '../lib/language'
 
 function buildWhatsAppLink(message) {
@@ -436,7 +437,7 @@ const localizedSiteData = {
           'Tarikh ini baru sahaja tidak tersedia. Sila pilih tarikh lain sebelum hantar permintaan baru.',
         selectionExpired:
           'Pilihan tarikh anda baru sahaja tidak tersedia dan telah dikosongkan. Sila pilih julat tarikh lain.',
-        invalidGuests: 'Jumlah tetamu yang dimasukkan tidak sah.',
+        invalidGuests: `Jumlah tetamu mesti antara 1 hingga ${MAX_GUESTS} orang.`,
         invalidDates:
           'Tarikh masuk dan keluar tidak sah. Sila semak semula pilihan anda.',
         fallbackError: 'Permintaan belum berjaya dihantar. Sila cuba lagi.',
@@ -862,7 +863,7 @@ const localizedSiteData = {
           'These dates just became unavailable. Please choose a different date range before sending a new request.',
         selectionExpired:
           'Your selected dates just became unavailable and were cleared. Please choose a different date range.',
-        invalidGuests: 'The guest count is not valid.',
+        invalidGuests: `Guest count must be between 1 and ${MAX_GUESTS}.`,
         invalidDates:
           'The selected check-in and check-out dates are not valid. Please review your selection.',
         fallbackError: 'The request could not be sent yet. Please try again.',

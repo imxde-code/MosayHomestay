@@ -1,3 +1,4 @@
+import { MAX_GUESTS } from '../lib/bookingGuests'
 import { normalizeLanguage } from '../lib/language'
 
 const localizedAdminContent = {
@@ -192,7 +193,7 @@ const localizedAdminContent = {
         'Log masuk tidak berjaya. Semak email dan kata laluan admin anda.',
       selectDates: 'Sila pilih tarikh masuk dan tarikh keluar.',
       invalidDateRange: 'Tarikh keluar mesti selepas tarikh masuk.',
-      invalidGuestCount: 'Jumlah tetamu mesti sekurang-kurangnya 1 orang.',
+      invalidGuestCount: `Jumlah tetamu mesti antara 1 hingga ${MAX_GUESTS} orang.`,
     },
     messages: {
       requestConfirmed:
@@ -411,7 +412,7 @@ const localizedAdminContent = {
         'Sign-in failed. Please check your admin email and password.',
       selectDates: 'Please choose a check-in date and a check-out date.',
       invalidDateRange: 'The check-out date must be after the check-in date.',
-      invalidGuestCount: 'Guest count must be at least 1.',
+      invalidGuestCount: `Guest count must be between 1 and ${MAX_GUESTS}.`,
     },
     messages: {
       requestConfirmed:

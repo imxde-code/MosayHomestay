@@ -21,6 +21,11 @@ import {
   getDisabledDateRanges,
   getSelectedStay,
 } from '../lib/bookingCalendar'
+import {
+  MAX_GUESTS,
+  PUBLIC_GUEST_OPTIONS,
+  isGuestCountWithinLimit,
+} from '../lib/bookingGuests'
 import { getDateFnsLocale } from '../lib/language'
 import { hasSupabaseConfig, supabase } from '../lib/supabaseClient'
 import { useAccessibleDialog } from '../lib/useAccessibleDialog'
@@ -103,7 +108,7 @@ function AvailabilityPill({ label, tone = 'default' }) {
 
 function BookingCalendarSection({ language, siteMeta, copy }) {
   const [selectedRange, setSelectedRange] = useState()
-  const [guests, setGuests] = useState('8')
+  const [guests, setGuests] = useState(String(MAX_GUESTS))
   const [monthsToShow, setMonthsToShow] = useState(2)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [inquiryForm, setInquiryForm] = useState(getInitialInquiryForm)
@@ -355,6 +360,11 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
       return
     }
 
+    if (!isGuestCountWithinLimit(guests)) {
+      setRequestError(copy.requestMessages.invalidGuests)
+      return
+    }
+
     if (findConflictingAvailabilityBlock(availabilityBlocks, selectedRange)) {
       setSelectedRange(undefined)
       setRequestError(copy.requestMessages.selectionExpired)
@@ -419,7 +429,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
 
     setInquiryForm(getInitialInquiryForm())
     setSelectedRange(undefined)
-    setGuests('8')
+    setGuests(String(MAX_GUESTS))
     setIsSubmittingRequest(false)
   }
 
@@ -623,7 +633,7 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
                     onChange={handleGuestsChange}
                     className="w-full rounded-2xl border border-[#eadccf] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
                   >
-                    {[4, 6, 8, 10, 12].map((option) => (
+                    {PUBLIC_GUEST_OPTIONS.map((option) => (
                       <option key={option} value={String(option)}>
                         {option} {copy.guestsSuffix}
                       </option>

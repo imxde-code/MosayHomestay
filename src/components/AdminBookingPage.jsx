@@ -21,6 +21,7 @@ import {
   formatBookingReference,
   formatDisplayDate,
 } from '../lib/bookingCalendar'
+import { MAX_GUESTS, isGuestCountWithinLimit } from '../lib/bookingGuests'
 import LanguageToggle from './LanguageToggle'
 import { getAdminContent } from '../data/adminContent'
 import { getIntlLocale, normalizeLanguage } from '../lib/language'
@@ -31,7 +32,7 @@ function getInitialFormState() {
     guestName: '',
     guestPhone: '',
     guestEmail: '',
-    guestCount: '8',
+    guestCount: String(MAX_GUESTS),
     startDate: '',
     endDate: '',
     holdExpiresAt: '',
@@ -620,7 +621,7 @@ function AdminBookingPage({
       return
     }
 
-    if (Number(form.guestCount) <= 0) {
+    if (!isGuestCountWithinLimit(form.guestCount)) {
       setFormError(copy.errors.invalidGuestCount)
       return
     }
@@ -1513,6 +1514,7 @@ function AdminBookingPage({
                     <input
                       type="number"
                       min="1"
+                      max={String(MAX_GUESTS)}
                       name="guestCount"
                       value={form.guestCount}
                       onChange={handleFormChange}
