@@ -22,12 +22,18 @@ const sharedSiteMeta = {
 export const galleryImages = [
   '/images/ruang-tamu.jpeg',
   '/images/ruang-makan.jpeg',
+  '/images/dry-kitchen.jpeg',
+  '/images/dry-kitchen-2.jpeg',
+  '/images/wet-kitchen.jpeg',
+  '/images/wet-kitchen-2.jpeg',
   '/images/bilik-utama-biru.jpeg',
   '/images/bilik-utama-ungu.jpeg',
   '/images/bilik-utama-merah-jambu.jpeg',
   '/images/bilik-dua-katil.jpeg',
   '/images/bilik-single-tambahan.jpeg',
-  '/images/pemandangan-kawasan.jpeg',
+  '/images/parking-space.jpeg',
+  '/images/parking-space-shoplot.jpeg',
+  '/images/parking-space-front.jpeg',
 ]
 
 const localizedSiteData = {
@@ -142,6 +148,30 @@ const localizedSiteData = {
           'Sesuai untuk sarapan, makan malam dan waktu santai bersama tetamu lain.',
         tag: 'Ruang makan',
       },
+      '/images/dry-kitchen.jpeg': {
+        title: 'Dapur kering',
+        description:
+          'Dapur kering yang lengkap dengan peralatan asas untuk menyediakan makanan dengan selesa.',
+        tag: 'Dapur',
+      },
+      '/images/dry-kitchen-2.jpeg': {
+        title: 'Dapur kering (paparan lain)',
+        description:
+          'Sudut lain dapur kering yang menunjukkan ruang kerja dan penyimpanan yang mencukupi.',
+        tag: 'Dapur',
+      },
+      '/images/wet-kitchen.jpeg': {
+        title: 'Dapur basah',
+        description:
+          'Dapur basah yang sesuai untuk memasak hidangan yang lebih berat dengan selesa.',
+        tag: 'Dapur',
+      },
+      '/images/wet-kitchen-2.jpeg': {
+        title: 'Dapur basah (paparan lain)',
+        description:
+          'Ruang dapur basah yang luas untuk kegunaan memasak sepanjang penginapan.',
+        tag: 'Dapur',
+      },
       '/images/bilik-utama-biru.jpeg': {
         title: 'Bilik utama biru',
         description: 'Bilik yang lapang dan tenang untuk rehat malam yang lebih selesa.',
@@ -169,11 +199,23 @@ const localizedSiteData = {
         description: 'Ruang tambahan yang praktikal untuk tetamu ekstra atau anak-anak.',
         tag: 'Bilik tambahan',
       },
-      '/images/pemandangan-kawasan.jpeg': {
-        title: 'Pemandangan kawasan sekitar',
+      '/images/parking-space.jpeg': {
+        title: 'Tempat letak kereta',
         description:
-          'Persekitaran kejiranan yang tenang dan sesuai untuk penginapan keluarga.',
-        tag: 'Kawasan sekitar',
+          'Tempat letak kereta yang selesa dan selamat di hadapan rumah untuk kegunaan tetamu.',
+        tag: 'Kemudahan luar',
+      },
+      '/images/parking-space-shoplot.jpeg': {
+        title: 'Tempat letak kereta (shoplot)',
+        description:
+          'Ruang letak kereta tambahan di kawasan shoplot berdekatan untuk kegunaan tetamu.',
+        tag: 'Kemudahan luar',
+      },
+      '/images/parking-space-front.jpeg': {
+        title: 'Tempat letak kereta hadapan rumah',
+        description:
+          'Pandangan tempat letak kereta di hadapan terus rumah untuk kemudahan tetamu.',
+        tag: 'Kemudahan luar',
       },
     },
     nearbyPlaces: [
@@ -566,6 +608,30 @@ const localizedSiteData = {
           'Great for breakfast, dinner, and relaxed moments with the group.',
         tag: 'Dining area',
       },
+      '/images/dry-kitchen.jpeg': {
+        title: 'Dry kitchen',
+        description:
+          'A well-equipped dry kitchen with the essentials for preparing meals comfortably.',
+        tag: 'Kitchen',
+      },
+      '/images/dry-kitchen-2.jpeg': {
+        title: 'Dry kitchen (another view)',
+        description:
+          'Another angle of the dry kitchen showing ample counter space and storage.',
+        tag: 'Kitchen',
+      },
+      '/images/wet-kitchen.jpeg': {
+        title: 'Wet kitchen',
+        description:
+          'A full wet kitchen ideal for heavier cooking throughout your stay.',
+        tag: 'Kitchen',
+      },
+      '/images/wet-kitchen-2.jpeg': {
+        title: 'Wet kitchen (another view)',
+        description:
+          'A spacious wet kitchen area for all your cooking needs during the stay.',
+        tag: 'Kitchen',
+      },
       '/images/bilik-utama-biru.jpeg': {
         title: 'Blue master room',
         description: 'A spacious and calming bedroom for a more restful night.',
@@ -595,11 +661,23 @@ const localizedSiteData = {
           'A practical extra space for additional guests or children.',
         tag: 'Extra room',
       },
-      '/images/pemandangan-kawasan.jpeg': {
-        title: 'Neighborhood surroundings',
+      '/images/parking-space.jpeg': {
+        title: 'Parking space',
         description:
-          'A calm residential setting that suits family stays well.',
-        tag: 'Surroundings',
+          'A convenient and secure parking spot in front of the house for guests.',
+        tag: 'Outdoor facilities',
+      },
+      '/images/parking-space-shoplot.jpeg': {
+        title: 'Parking space (shoplot)',
+        description:
+          'Additional parking available at the nearby shoplot for extra vehicles.',
+        tag: 'Outdoor facilities',
+      },
+      '/images/parking-space-front.jpeg': {
+        title: 'Parking in front of the house',
+        description:
+          'Direct front-of-house parking view for easy guest access.',
+        tag: 'Outdoor facilities',
       },
     },
     nearbyPlaces: [
