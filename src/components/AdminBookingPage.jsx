@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ArrowLeft,
   CalendarDays,
+  CheckCircle2,
   LoaderCircle,
   Lock,
   LogOut,
@@ -569,6 +570,14 @@ function AdminBookingPage({
       booking.status === 'inquiry'
         ? copy.messages.requestCancelled
         : copy.messages.bookingCancelled,
+    )
+  }
+
+  async function handleMarkDone(booking) {
+    await handleUpdateBookingStatus(
+      booking,
+      'completed',
+      copy.messages.bookingCompleted,
     )
   }
 
@@ -1343,6 +1352,18 @@ function AdminBookingPage({
                                 <Pencil className="size-4" />
                                 {copy.actions.edit}
                               </button>
+
+                              {booking.status === 'confirmed' &&
+                              new Date(booking.end_date) < new Date() ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkDone(booking)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-[#c3d9c3] bg-[#eaf4ea] px-4 py-2.5 text-sm font-semibold text-[#2e6a44] transition hover:-translate-y-0.5 hover:border-[#a8c9a8]"
+                                >
+                                  <CheckCircle2 className="size-4" />
+                                  {copy.actions.markDone}
+                                </button>
+                              ) : null}
 
                               {booking.status !== 'cancelled' ? (
                                 <button
