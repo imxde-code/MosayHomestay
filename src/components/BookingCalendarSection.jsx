@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react'
-import { addMonths, startOfToday } from 'date-fns'
+import { addDays, addMonths, startOfToday } from 'date-fns'
 import {
   AlertCircle,
   ArrowRight,
@@ -242,10 +242,47 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
     }
   }, [refreshAvailability])
 
-  const disabledDays = [
-    { before: today },
-    ...getDisabledDateRanges(availabilityBlocks),
-  ]
+  // Smart disabled function that allows same-day turnover:
+  // checkout at 11am / check-in at 3pm on the same calendar date is valid.
+  //
+  // Rule: the check-in day (start_date) of an existing booking is normally
+  // disabled. BUT when the user is already picking their END date (checkout),
+  // that day becomes clickable — they are checking OUT while the next guest
+  // checks IN, which is fine. Interior nights remain blocked in both modes.
+  const disabledDays = useCallback(
+    (date) => {
+      const d = normalizeDate(date)
+      if (!d) return false
+
+      // Always block dates before today
+      if (d < today) return true
+
+      // Are we in "picking checkout" mode? (start selected, end not yet)
+      const isPickingCheckout =
+        Boolean(selectedRange?.from) && !selectedRange?.to
+
+      for (const block of availabilityBlocks) {
+        const blockStart = normalizeDate(block.start_date)
+        const blockEnd = normalizeDate(block.end_date)
+        if (!blockStart || !blockEnd) continue
+
+        // The last occupied night is end_date - 1 (checkout day is free)
+        const lastOccupiedNight = addDays(blockEnd, -1)
+
+        if (d >= blockStart && d <= lastOccupiedNight) {
+          // When picking checkout, allow the block's own check-in day as
+          // a valid checkout date (same-day turnover scenario)
+          if (isPickingCheckout && d.getTime() === blockStart.getTime()) {
+            return false
+          }
+          return true
+        }
+      }
+
+      return false
+    },
+    [availabilityBlocks, selectedRange],
+  )
   const selectedStay = getSelectedStay(selectedRange)
   const whatsappLink = selectedStay
     ? buildWhatsAppBookingLink({
@@ -293,6 +330,16 @@ function BookingCalendarSection({ language, siteMeta, copy }) {
   }
 
   function handleCalendarRangeSelect(nextRange) {
+    // Once the user has picked both dates, validate the range against live
+    // availability. This is a UI-side safety net — the real guard is the DB
+    // constraint, but catching it here gives instant feedback.
+    if (nextRange?.from && nextRange?.to) {
+      if (findConflictingAvailabilityBlock(availabilityBlocksRef.current, nextRange)) {
+        setSelectedRange(undefined)
+        setRequestError(copy.requestMessages.selectionExpired)
+        return
+      }
+    }
     setSelectedRange(nextRange)
     setRequestError('')
     setRequestSuccess('')
