@@ -92,9 +92,20 @@ const localizedAdminContent = {
       searchPlaceholder: 'Nama, telefon, email, rujukan, nota...',
       sourceLabel: 'Sumber booking',
       statusFilterLabel: 'Tapis ikut status',
+      monthFilterLabel: 'Tapis ikut bulan',
+      allMonths: 'Semua bulan',
       resultsSummary: (filteredCount, totalCount) =>
         `Memaparkan ${filteredCount} daripada ${totalCount} rekod.`,
       resetFilters: 'Reset carian & tapisan',
+    },
+    revenue: {
+      eyebrow: 'Ringkasan Pendapatan',
+      title: 'Pendapatan disahkan',
+      grandTotalLabel: 'Jumlah keseluruhan',
+      monthlyLabel: (month) => `Jumlah untuk ${month}`,
+      rateNote: 'RM 400 / malam · Booking disahkan & selesai sahaja',
+      currency: 'RM',
+      noData: 'Tiada booking disahkan untuk dikira.',
     },
     inquirySection: {
       eyebrow: 'Permintaan Menunggu Tindakan',
@@ -314,9 +325,20 @@ const localizedAdminContent = {
       searchPlaceholder: 'Name, phone, email, reference, notes...',
       sourceLabel: 'Booking source',
       statusFilterLabel: 'Filter by status',
+      monthFilterLabel: 'Filter by month',
+      allMonths: 'All months',
       resultsSummary: (filteredCount, totalCount) =>
         `Showing ${filteredCount} of ${totalCount} records.`,
       resetFilters: 'Reset search & filters',
+    },
+    revenue: {
+      eyebrow: 'Revenue Summary',
+      title: 'Confirmed revenue',
+      grandTotalLabel: 'Grand total',
+      monthlyLabel: (month) => `Total for ${month}`,
+      rateNote: 'RM 400 / night · Confirmed & completed bookings only',
+      currency: 'RM',
+      noData: 'No confirmed bookings to calculate.',
     },
     inquirySection: {
       eyebrow: 'Requests Awaiting Action',

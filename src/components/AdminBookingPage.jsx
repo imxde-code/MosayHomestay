@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
+  TrendingUp,
   UserRound,
   XCircle,
 } from 'lucide-react'
@@ -152,6 +153,28 @@ function formatAdminDateTime(value, language) {
   }).format(new Date(value))
 }
 
+const NIGHTLY_RATE = 400
+
+function calculateNights(startDate, endDate) {
+  if (!startDate || !endDate) return 0
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const nights = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+  return Math.max(0, nights)
+}
+
+function formatMonthLabel(yearMonth, language) {
+  const [year, month] = yearMonth.split('-').map(Number)
+  return new Intl.DateTimeFormat(getIntlLocale(language), {
+    year: 'numeric',
+    month: 'long',
+  }).format(new Date(year, month - 1, 1))
+}
+
+function formatRevenue(amount, currency) {
+  return `${currency} ${amount.toLocaleString()}`
+}
+
 function normalizePhoneForWhatsApp(value) {
   const digits = String(value ?? '').replace(/\D/g, '')
 
@@ -256,6 +279,7 @@ function AdminBookingPage({
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sourceFilter, setSourceFilter] = useState('all')
+  const [monthFilter, setMonthFilter] = useState('')
 
   useEffect(() => {
     if (!supabase) {
@@ -413,6 +437,38 @@ function AdminBookingPage({
     bookingCountsByStatus[booking.status] += 1
   })
 
+  const availableMonths = Array.from(
+    new Set(
+      bookings
+        .map((booking) => booking.start_date?.slice(0, 7))
+        .filter(Boolean),
+    ),
+  ).sort().reverse()
+
+  const revenueStatuses = new Set(['confirmed', 'completed'])
+
+  const grandTotalRevenue = bookings
+    .filter((booking) => revenueStatuses.has(booking.status))
+    .reduce(
+      (sum, booking) =>
+        sum + calculateNights(booking.start_date, booking.end_date) * NIGHTLY_RATE,
+      0,
+    )
+
+  const monthlyRevenue = monthFilter
+    ? bookings
+        .filter(
+          (booking) =>
+            revenueStatuses.has(booking.status) &&
+            booking.start_date?.startsWith(monthFilter),
+        )
+        .reduce(
+          (sum, booking) =>
+            sum + calculateNights(booking.start_date, booking.end_date) * NIGHTLY_RATE,
+          0,
+        )
+    : grandTotalRevenue
+
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
   const filteredBookings = bookings.filter((booking) => {
     if (statusFilter !== 'all' && booking.status !== statusFilter) {
@@ -420,6 +476,10 @@ function AdminBookingPage({
     }
 
     if (sourceFilter !== 'all' && booking.source !== sourceFilter) {
+      return false
+    }
+
+    if (monthFilter && !booking.start_date?.startsWith(monthFilter)) {
       return false
     }
 
@@ -446,7 +506,8 @@ function AdminBookingPage({
   const hasActiveWorkflowFilters =
     Boolean(normalizedSearchQuery) ||
     statusFilter !== 'all' ||
-    sourceFilter !== 'all'
+    sourceFilter !== 'all' ||
+    Boolean(monthFilter)
 
   function resetForm() {
     setForm(getInitialFormState())
@@ -462,6 +523,7 @@ function AdminBookingPage({
     setSearchQuery('')
     setStatusFilter('all')
     setSourceFilter('all')
+    setMonthFilter('')
   }
 
   function handleFormChange(event) {
@@ -904,6 +966,55 @@ function AdminBookingPage({
                 ))}
               </div>
 
+              {/* Revenue Summary Card */}
+              <div className="rounded-[2.5rem] border border-[#443327] bg-[#2f221a] p-8 text-[#f8f2ea] shadow-[0_32px_120px_rgba(47,34,26,0.22)] sm:p-10">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#d7bea2]">
+                      <TrendingUp className="size-4" />
+                      {copy.revenue.eyebrow}
+                    </p>
+                    <h2 className="mt-4 font-display text-3xl leading-none">
+                      {copy.revenue.title}
+                    </h2>
+                  </div>
+                </div>
+
+                {grandTotalRevenue === 0 ? (
+                  <p className="mt-6 text-sm leading-7 text-[#dbc8b7]">
+                    {copy.revenue.noData}
+                  </p>
+                ) : (
+                  <div className="mt-6 space-y-4">
+                    <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#d7bea2]">
+                        {copy.revenue.grandTotalLabel}
+                      </p>
+                      <p className="mt-2 text-4xl font-semibold">
+                        {formatRevenue(grandTotalRevenue, copy.revenue.currency)}
+                      </p>
+                    </div>
+
+                    {monthFilter ? (
+                      <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#d7bea2]">
+                          {copy.revenue.monthlyLabel(
+                            formatMonthLabel(monthFilter, resolvedLanguage),
+                          )}
+                        </p>
+                        <p className="mt-2 text-4xl font-semibold">
+                          {formatRevenue(monthlyRevenue, copy.revenue.currency)}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                <p className="mt-5 text-xs leading-6 text-[#a08070]">
+                  {copy.revenue.rateNote}
+                </p>
+              </div>
+
               <div className="rounded-[2.5rem] border border-white/70 bg-white/88 p-8 shadow-[0_24px_80px_rgba(80,58,35,0.08)] sm:p-10">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
@@ -934,7 +1045,7 @@ function AdminBookingPage({
 
                 <div className="mt-6 rounded-[2rem] border border-[#eadccf] bg-[#fcfaf7] p-5">
                   <div className="flex flex-col gap-5">
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.6fr)_minmax(0,0.6fr)]">
                       <label className="block">
                         <span className="mb-3 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
                           <Search className="size-4" />
@@ -962,6 +1073,25 @@ function AdminBookingPage({
                           {adminSourceFilters.map((filterOption) => (
                             <option key={filterOption.value} value={filterOption.value}>
                               {filterOption.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-3 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-[#8b6b4a]">
+                          <CalendarDays className="size-4" />
+                          {copy.recordsSection.monthFilterLabel}
+                        </span>
+                        <select
+                          value={monthFilter}
+                          onChange={(event) => setMonthFilter(event.target.value)}
+                          className="w-full rounded-2xl border border-[#eadccf] bg-white px-4 py-3.5 text-base outline-none transition focus:border-[#8b6b4a] focus:ring-4 focus:ring-[#e9d7bf]"
+                        >
+                          <option value="">{copy.recordsSection.allMonths}</option>
+                          {availableMonths.map((yearMonth) => (
+                            <option key={yearMonth} value={yearMonth}>
+                              {formatMonthLabel(yearMonth, resolvedLanguage)}
                             </option>
                           ))}
                         </select>
