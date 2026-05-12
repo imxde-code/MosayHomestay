@@ -12,14 +12,15 @@ import {
 } from 'lucide-react'
 import {
   buildWhatsAppBookingLink,
+  findConflictingAvailabilityBlock,
   formatBookingReference,
   formatDateKey,
   formatDisplayDate,
   formatDisplayShortDate,
-  findConflictingAvailabilityBlock,
   getBlockedStayRange,
   getDisabledDateRanges,
   getSelectedStay,
+  normalizeDate,
 } from '../lib/bookingCalendar'
 import {
   MAX_GUESTS,
